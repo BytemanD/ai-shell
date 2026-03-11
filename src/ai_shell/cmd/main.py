@@ -31,6 +31,8 @@ def cli(verbose: int):
     "-o", "--output", type=Path, default=AppConfig.model_config.get("toml_file")
 )
 def config(save: bool, output: Path):
+    """显示配置文件"""
+
     click.echo(f"配置文件: {output}")
     click.echo()
     click.echo(toml.dumps(CONF.model_dump()))

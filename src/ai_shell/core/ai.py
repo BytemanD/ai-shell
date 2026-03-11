@@ -1,3 +1,4 @@
+import atexit
 import logging
 import re
 from enum import Enum
@@ -31,6 +32,11 @@ class AIShell:
         )
         self.model = CONF.openai.model
         self.messages: Sequence[ChatCompletionMessageParam] = []
+        atexit.register(self.close)
+
+    def close(self):
+        LOG.info("Closing OpenAI session")
+        self.openai.close()
 
     def _add_message(self, content: str, role: MessageRole):
         if role == MessageRole.USER:
