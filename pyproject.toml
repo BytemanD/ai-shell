@@ -1,0 +1,27 @@
+[project]
+name = "ai-shell"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "BytemanD", email = "byteman.d@outlook.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.3.1",
+    "openai>=2.26.0",
+    "pydantic-settings[toml]>=2.13.1",
+    "pystonic",
+    "rich>=14.3.3",
+    "toml>=0.10.2",
+]
+
+[project.scripts]
+ai-shell = "ai_shell:main"
+
+[build-system]
+requires = ["uv_build>=0.10.8,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pystonic = { url = "https://test-files.pythonhosted.org/packages/4e/99/8bc08f918d1d6a5a227d676aa1d3136fe835ebab2cb7ae12a206e40f5855/pystonic-0.1.0-py3-none-any.whl" }
