@@ -39,14 +39,7 @@ class AIShell:
         self.openai.close()
 
     def _add_message(self, content: str, role: MessageRole):
-        if role == MessageRole.USER:
-            self.messages.append({"role": "user", "content": content})
-        elif role == MessageRole.ASSISTANT:
-            self.messages.append({"role": "assistant", "content": content})
-        elif role == MessageRole.SYSTEM:
-            self.messages.append({"role": "system", "content": content})
-        else:
-            raise ValueError("Invalid role")
+        self.messages.append({"role": role.value, "content": content})
 
     def _ask_with_stream(self):
         completion = self.openai.chat.completions.create(
