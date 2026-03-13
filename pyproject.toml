@@ -1,6 +1,6 @@
 [project]
 name = "ai-shell"
-version = "0.1.0"
+version = "0.1.1"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -25,3 +25,8 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 pystonic = { url = "https://test-files.pythonhosted.org/packages/4e/99/8bc08f918d1d6a5a227d676aa1d3136fe835ebab2cb7ae12a206e40f5855/pystonic-0.1.0-py3-none-any.whl" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
