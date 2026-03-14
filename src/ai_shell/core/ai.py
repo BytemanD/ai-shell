@@ -1,7 +1,7 @@
 import atexit
 import logging
 from enum import Enum
-from typing import List
+from typing import Callable, Dict, List
 
 import click
 from openai import OpenAI
@@ -35,8 +35,7 @@ SYSTEM_PROMOTE = """你是一个操作系统专家，擅长使用命令处理用
 
 1. 不需要包含任何解释和说明
 2. 只输出以markdown形式输出命令(用```包裹命令内容)
-3. 尽量使用一样命令完成任务
-4. 如果有多种实现方式，只要给出最优的一个
+3. 如果有多种实现方式，只要给出最优的一个
 
 当前系统: {name}
 版本: {version}
@@ -62,6 +61,8 @@ class AIShell:
             version=self.shell.version,
             terminal=self.shell.terminal,
         )
+        self.actions = load_actions()
+
         LOG.info("system prompt: %s", system_prompt)
         self._add_message(content=system_prompt, role=MessageRole.SYSTEM)
 
@@ -149,6 +150,9 @@ class AIShell:
             self.ai_run(user_input)
 
     def ai_run(self, user_input: str):
+        if user_input in self.actions:
+            self.actions[user_input](self)
+            return
         console = Console()
         answer = self._ask_with_stream(user_input)
         LOG.info("answer: %s", answer)
@@ -167,3 +171,12 @@ class AIShell:
                 click.echo("~~~~~~~~~~~~~~~~~~~")
                 self.shell.execute(code_block)
                 click.echo("~~~~~~~~~~~~~~~~~~~")
+
+
+def load_actions() -> Dict[str, Callable[[AIShell], None]]:
+    from ai_shell.core.ai_actions import print_messages, print_actions
+
+    return {
+        "/messages": print_messages,
+        "/actions": print_actions,
+    }
