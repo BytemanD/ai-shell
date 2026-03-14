@@ -29,4 +29,5 @@ pystonic = { url = "https://test-files.pythonhosted.org/packages/4e/99/8bc08f918
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "ruff>=0.15.6",
 ]

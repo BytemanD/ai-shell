@@ -1,18 +1,23 @@
 import atexit
 import logging
 from enum import Enum
-from typing import Sequence
+from typing import List
 
 import click
 from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageParam
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+)
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ai_shell.common import utils
 from ai_shell.common.conf import CONF
-from ai_shell.common.shell import Shell
+from ai_shell.core.shell import Shell
 
 LOG = logging.getLogger(__name__)
 
@@ -51,7 +56,7 @@ class AIShell:
             timeout=CONF.openai.timeout,
         )
         self.model = CONF.openai.model
-        self.messages: Sequence[ChatCompletionMessageParam] = []
+        self.messages: List[ChatCompletionMessageParam] = []
         system_prompt = SYSTEM_PROMOTE.strip().format(
             name=self.shell.platform,
             version=self.shell.version,
@@ -67,7 +72,24 @@ class AIShell:
         self.openai.close()
 
     def _add_message(self, content: str, role: MessageRole):
-        self.messages.append({"role": role.value, "content": content})
+        if role == MessageRole.SYSTEM:
+            self.messages.append(
+                ChatCompletionSystemMessageParam(
+                    content=content, role=MessageRole.SYSTEM.value
+                )
+            )
+        elif role == MessageRole.ASSISTANT:
+            self.messages.append(
+                ChatCompletionAssistantMessageParam(
+                    content=content, role=MessageRole.ASSISTANT.value
+                )
+            )
+        else:
+            self.messages.append(
+                ChatCompletionUserMessageParam(
+                    content=content, role=MessageRole.USER.value
+                )
+            )
 
     def _ask_with_stream(self, question: str):
         """Ask the question to the model"""
@@ -87,12 +109,16 @@ class AIShell:
             if hasattr(chunk.choices[0].delta, "reasoning_content"):
                 # 思考
                 click.secho(
-                    chunk.choices[0].delta.reasoning_content, nl=False, fg="white"
+                    getattr(chunk.choices[0].delta, "reasoning_content"),
+                    nl=False,
+                    fg="white",
                 )
                 continue
 
             # 结果
             content = chunk.choices[0].delta.content
+            if not content:
+                continue
             click.echo(content, nl=False)
             if status == "answer":
                 answer += content
@@ -139,5 +165,5 @@ class AIShell:
             click.secho("开始执行...", fg="yellow")
             for code_block in code_blocks:
                 click.echo("~~~~~~~~~~~~~~~~~~~")
-                self.shell.execute_by_file(code_block)
+                self.shell.execute(code_block)
                 click.echo("~~~~~~~~~~~~~~~~~~~")

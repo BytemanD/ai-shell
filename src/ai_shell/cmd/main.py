@@ -54,15 +54,16 @@ def list_model():
 
 
 @cli.command()
-@click.option('-y', '--yes', is_flag=True, help="yes to run")
+@click.option("-y", "--yes", is_flag=True, help="yes to run")
 def chat(yes: bool):
     """交互模式"""
     aishell = AIShell(yes=yes)
     aishell.chat()
 
+
 @cli.command()
 @click.argument("user_input")
-@click.option('-y', '--yes', is_flag=True, help="yes to run")
+@click.option("-y", "--yes", is_flag=True, help="yes to run")
 def run(user_input: str, yes: bool):
     """执行模式"""
     aishell = AIShell(yes=yes)
