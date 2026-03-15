@@ -167,7 +167,7 @@ def models():
     console = Console()
     columns = Columns(
         [
-            x if x != aishell.model else Padding(x, style="green")
+            x if x != aishell.model else Padding(x, style="bold green")
             for x in aishell.list_model()
         ]
     )
