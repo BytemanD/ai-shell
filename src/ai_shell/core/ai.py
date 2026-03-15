@@ -49,12 +49,13 @@ class AIShell:
     def __init__(self, yes=False):
         self.shell = Shell()
         self.yes = yes
+        self.provider = CONF.get_used_provider()
         self.openai = OpenAI(
-            api_key=CONF.openai.api_key,
-            base_url=CONF.openai.base_url,
-            timeout=CONF.openai.timeout,
+            api_key=self.provider.api_key,
+            base_url=str(self.provider.base_url),
+            timeout=self.provider.timeout,
         )
-        self.model = CONF.openai.model
+        self.model = self.provider.model
         self.messages: List[ChatCompletionMessageParam] = []
         system_prompt = SYSTEM_PROMOTE.strip().format(
             name=self.shell.platform,
@@ -99,7 +100,7 @@ class AIShell:
             model=self.model,
             messages=self.messages,
             stream=True,
-            extra_body={"enable_thinking": CONF.openai.enable_thinking},
+            extra_body={"enable_thinking": self.provider.enable_thinking},
         )
         answer = ""
         status = "answer"

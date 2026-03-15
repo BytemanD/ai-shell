@@ -1,11 +1,11 @@
 import logging
-from pathlib import Path
 
 import click
-import toml
 
-from ai_shell.common.conf import CONF, AppConfig
+from ai_shell.cmd import _provider
 from ai_shell.core.ai import AIShell
+
+from . import _config
 
 LOG = logging.getLogger(__name__)
 
@@ -23,25 +23,6 @@ def cli(verbose: int):
         level=log_levels[min(verbose, len(log_levels) - 1)],
         format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
     )
-
-
-@cli.command()
-@click.option("-s", "--save", is_flag=True)
-@click.option(
-    "-o", "--output", type=Path, default=AppConfig.model_config.get("toml_file")
-)
-def config(save: bool, output: Path):
-    """显示配置文件"""
-
-    click.echo(f"配置文件: {output}")
-    click.echo()
-    click.echo(toml.dumps(CONF.model_dump()))
-
-    if save:
-        LOG.info("保存配置")
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with open(output, "w") as f:
-            toml.dump(CONF.model_dump(), f)
 
 
 @cli.command()
@@ -70,5 +51,7 @@ def run(user_input: str, yes: bool):
     aishell.ai_run(user_input)
 
 
+cli.add_command(_config.config)
+cli.add_command(_provider.provider)
 if __name__ == "__main__":
     cli()

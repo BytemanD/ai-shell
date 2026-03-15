@@ -1,21 +1,26 @@
+import logging
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     TomlConfigSettingsSource,
 )
 from pystonic.conf import SettingsConfigDict
+import toml
+
+LOG = logging.getLogger(__name__)
 
 
-class OpenAIConfig(BaseModel):
-    base_url: Optional[str] = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    model: str = "qwen-plus"
-    api_key: Optional[str] = None
+class ProviderConfig(BaseModel):
+    name: str
+    base_url: HttpUrl
+    api_key: str = ""
     timeout: int = 10
     enable_thinking: bool = False
+    model: str = ""
 
 
 class AppConfig(BaseSettings):
@@ -44,7 +49,47 @@ class AppConfig(BaseSettings):
             init_settings,
         )
 
-    openai: OpenAIConfig = OpenAIConfig()
+    use_provider: str = "alibaba"
+    providers: List[ProviderConfig] = []
+
+    def get_conf_file(self) -> Optional[Path]:
+        files = self.model_config.get("toml_file")
+        if not files:
+            return None
+        return files if isinstance(files, Path) else Path(files[0])
+
+    def save(self):
+        file_path = self.get_conf_file()
+        if not file_path:
+            LOG.warning("No configuration file specified, skipping save")
+            return
+        LOG.info("Saving configuration: %s", self.model_dump_json())
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        LOG.info("保存配置 %s", file_path)
+        with open(file_path, "w") as f:
+            toml.dump(CONF.model_dump(mode="json"), f)
+
+    def add_provider(self, provider: ProviderConfig):
+        LOG.info("add provider: %s", provider)
+        self.providers.append(provider)
+
+    def get_providers(self) -> List[str]:
+        return [x.name for x in self.providers]
+
+    def get_used_provider(self):
+        provider_name = self.use_provider
+        provider = next((p for p in CONF.providers if p.name == provider_name), None)
+        if not provider:
+            raise ValueError(f"Provider '{provider_name}' not found in configuration")
+        return provider
 
 
-CONF = AppConfig()
+CONF = AppConfig(
+    providers=[
+        ProviderConfig(
+            name="alibaba",
+            base_url=HttpUrl("https://dashscope.aliyuncs.com/compatible-mode/v1"),
+            api_key="",
+        )
+    ]
+)
