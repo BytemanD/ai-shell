@@ -1,9 +1,9 @@
 import abc
-from enum import Enum
 import logging
 import os
 import platform
 import tempfile
+from enum import Enum
 
 LOG = logging.getLogger(__name__)
 
@@ -24,10 +24,6 @@ class ExecuteDriver(abc.ABC):
 
     def execute(self, code_block: str):
         LOG.debug("code block: %s", code_block)
-        # if "\n" not in code_block:
-        #     os.system(self.oneline_command(code_block))
-        #     return
-
         with tempfile.NamedTemporaryFile(
             mode="w", delete=False, suffix=self.SCRIPT_SUFFIX
         ) as file:
