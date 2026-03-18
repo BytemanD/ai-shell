@@ -24,7 +24,7 @@ requires = ["uv_build>=0.10.8,<0.11.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
-pystonic = { url = "https://test-files.pythonhosted.org/packages/4e/99/8bc08f918d1d6a5a227d676aa1d3136fe835ebab2cb7ae12a206e40f5855/pystonic-0.1.0-py3-none-any.whl" }
+pystonic = { url = "https://test-files.pythonhosted.org/packages/d1/13/871615a76376463810d6231a69ecd3e93ae0d4d04b687cc09791f23f8d19/pystonic-0.1.2-py3-none-any.whl" }
 
 [dependency-groups]
 dev = [

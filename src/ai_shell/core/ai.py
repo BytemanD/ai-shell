@@ -6,18 +6,18 @@ from typing import Callable, Dict, List
 import click
 from openai import OpenAI
 from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
     ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
-    ChatCompletionAssistantMessageParam,
 )
+from pystonic.shell import Shell
+from pystonic.utils import textutil
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from ai_shell.common import utils
 from ai_shell.common.conf import CONF
-from ai_shell.core.shell import Shell
 
 LOG = logging.getLogger(__name__)
 
@@ -160,7 +160,7 @@ class AIShell:
         if "无法识别意图" in answer:
             return
         console.print(Panel(Markdown(answer), border_style="green"))
-        code_blocks = utils.find_code_blocks_from_markdown(answer)
+        code_blocks = textutil.find_code_blocks_from_markdown(answer)
         LOG.info("matched code blocks: %s", code_blocks)
         if not code_blocks:
             click.secho("无可执行命令", fg="red")
@@ -175,7 +175,7 @@ class AIShell:
 
 
 def load_actions() -> Dict[str, Callable[[AIShell], None]]:
-    from ai_shell.core.ai_actions import print_messages, print_actions
+    from ai_shell.core.ai_actions import print_actions, print_messages
 
     return {
         "/messages": print_messages,
