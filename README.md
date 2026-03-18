@@ -37,6 +37,17 @@ model = "qwen-plus"
 api_key = "your-api-key"
 ```
 
+其他配置
+```toml
+
+[[providers]]
+# other configs
+# 启用思考
+extra_body = {enable_thinking = true}
+
+
+```
+
 ### 使用方式
 
 **交互模式** - 持续对话:

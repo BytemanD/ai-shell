@@ -28,15 +28,7 @@ class MessageRole(str, Enum):
     ASSISTANT = "assistant"
 
 
-SYSTEM_PROMOTE = """你是一个操作系统专家，擅长使用命令处理用户的任务。
-当用户向你描述他们想要完成的任务时，你的职责是：
-准确解析用户的自然语言描述, 直接输出能在终端运行的命令。
-输出的命令必须遵循以下规则：
-
-1. 不需要包含任何解释和说明
-2. 只输出以markdown形式输出命令(用```包裹命令内容)
-3. 如果有多种实现方式，只要给出最优的一个
-
+SYSTEM_PROMPT_NOTE = """
 当前系统: {name}
 版本: {version}
 终端: {terminal}
@@ -57,7 +49,7 @@ class AIShell:
         )
         self.model = self.provider.model
         self.messages: List[ChatCompletionMessageParam] = []
-        system_prompt = SYSTEM_PROMOTE.strip().format(
+        system_prompt = (CONF.system_prompt.strip() + SYSTEM_PROMPT_NOTE).format(
             name=self.shell.platform,
             version=self.shell.version,
             terminal=self.shell.terminal,
@@ -100,7 +92,7 @@ class AIShell:
             model=self.model,
             messages=self.messages,
             stream=True,
-            extra_body={"enable_thinking": self.provider.enable_thinking},
+            extra_body=self.provider.extra_body,
         )
         answer = ""
         status = "answer"
@@ -144,9 +136,13 @@ class AIShell:
 
         while True:
             user_input = click.prompt(
-                click.style("请输入你的意图", fg="bright_white", bg="cyan")
+                click.style(
+                    CONF.input_prompt,
+                    fg="bright_white",
+                    bg="cyan",
+                )
             )
-            if user_input in ["exit", "quit", "q"]:
+            if user_input in CONF.exit_keys:
                 break
             self.ai_run(user_input)
 
