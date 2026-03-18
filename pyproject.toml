@@ -3,16 +3,9 @@ name = "ai-shell"
 version = "0.1.2"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "BytemanD", email = "byteman.d@outlook.com" }
-]
+authors = [{ name = "BytemanD", email = "byteman.d@outlook.com" }]
 requires-python = ">=3.10"
-dependencies = [
-    "click>=8.3.1",
-    "openai>=2.26.0",
-    "pystonic",
-    "rich>=14.3.3",
-]
+dependencies = ["click>=8.3.1", "openai>=2.26.0", "pystonic", "rich>=14.3.3"]
 
 [project.scripts]
 ai-shell = "ai_shell.cmd.main:cli"
@@ -25,7 +18,9 @@ build-backend = "uv_build"
 pystonic = { url = "https://test-files.pythonhosted.org/packages/d1/13/871615a76376463810d6231a69ecd3e93ae0d4d04b687cc09791f23f8d19/pystonic-0.1.2-py3-none-any.whl" }
 
 [dependency-groups]
-dev = [
-    "pytest>=9.0.2",
-    "ruff>=0.15.6",
-]
+dev = ["pytest>=9.0.2", "ruff>=0.15.6"]
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple"
+publish-url = "https://test.pypi.org/legacy/"
