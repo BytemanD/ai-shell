@@ -40,8 +40,13 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_shell"]
 
+
 [tool.uv.sources]
 pystonic = { url = "https://test-files.pythonhosted.org/packages/d1/13/871615a76376463810d6231a69ecd3e93ae0d4d04b687cc09791f23f8d19/pystonic-0.1.2-py3-none-any.whl" }
+
+[[tool.uv.index]]
+name = "tencent"
+url = "http://mirrors.cloud.tencent.com/pypi/simple"
 
 [[tool.uv.index]]
 name = "testpypi"
