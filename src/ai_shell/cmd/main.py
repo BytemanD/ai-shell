@@ -27,15 +27,6 @@ def cli(verbose: int):
 
 
 @cli.command()
-def list_model():
-    """列出模型"""
-
-    aishell = AIShell()
-    for i, model in enumerate(aishell.list_model(), start=1):
-        click.echo(f"{i:0>3} {model}")
-
-
-@cli.command()
 @click.option("-y", "--yes", is_flag=True, help="yes to run")
 def chat(yes: bool):
     """交互模式"""

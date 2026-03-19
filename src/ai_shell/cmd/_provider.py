@@ -2,12 +2,12 @@ import logging
 from urllib.parse import urlparse
 
 import click
-from pydantic import HttpUrl
-from rich.console import Console
-from rich.table import Table
-from rich.columns import Columns
-from rich.padding import Padding
 import toml
+from pydantic import HttpUrl
+from rich.columns import Columns
+from rich.console import Console
+from rich.padding import Padding
+from rich.table import Table
 
 from ai_shell.common.conf import CONF, ProviderConfig
 from ai_shell.core.ai import AIShell

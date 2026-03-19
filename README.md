@@ -58,7 +58,7 @@ ai-shell run "查找当前目录下所有大于 100MB 的文件"
 **列出可用模型**:
 
 ```bash
-ai-shell list-model
+ai-shell provider models
 ```
 
 ## 命令
@@ -67,7 +67,7 @@ ai-shell list-model
 |------|------|
 | `ai-shell chat` | 进入交互式对话模式 |
 | `ai-shell run <指令>` | 直接执行单条命令 |
-| `ai-shell list-model` | 列出可用的 AI 模型 |
+| `ai-shell provider models` | 列出可用的 AI 模型 |
 | `ai-shell config list` | 显示当前配置 |
 
 ### 交互模式命令

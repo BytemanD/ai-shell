@@ -28,7 +28,7 @@ class MessageRole(str, Enum):
     ASSISTANT = "assistant"
 
 
-SYSTEM_PROMPT_NOTE = """
+SYSTEM_PROMPT_NOTICE = """
 当前系统: {name}
 版本: {version}
 终端: {terminal}
@@ -53,7 +53,7 @@ class AIShell:
         # 设置聊天记录保存条数
         self.messages: List[ChatCompletionMessageParam] = []
 
-        system_prompt = (CONF.system_prompt.strip() + SYSTEM_PROMPT_NOTE).format(
+        system_prompt = (CONF.system_prompt.strip() + SYSTEM_PROMPT_NOTICE).format(
             name=self.shell.platform,
             version=self.shell.version,
             terminal=self.shell.terminal,
@@ -104,7 +104,7 @@ class AIShell:
         for chunk in completion:
             if not chunk.choices:
                 break
-            if getattr(chunk.choices[0].delta, "reasoning_content"):
+            if getattr(chunk.choices[0].delta, "reasoning_content", None):
                 # 思考
                 click.secho(
                     getattr(chunk.choices[0].delta, "reasoning_content"),
