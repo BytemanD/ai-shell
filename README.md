@@ -13,13 +13,7 @@ AI-powered shell command generator - 用自然语言生成终端命令
 ## 安装
 
 ```bash
-pip install ai-shell
-```
-
-或使用 uv:
-
-```bash
-uv pip install ai-shell
+pip install -i https://test.pypi.org/simple/ ai-shell
 ```
 
 ## 快速开始
@@ -41,8 +35,7 @@ api_key = "your-api-key"
 ```toml
 
 [[providers]]
-# other configs
-# 启用思考
+# 启用思考模式
 extra_body = {enable_thinking = true}
 
 

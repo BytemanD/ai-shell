@@ -22,16 +22,19 @@ classifiers = [
 ]
 dependencies = [
     "click>=8.3.1",
-    "openai>=2.26.0",
-    "pystonic>=0.1.2",
+    "openai>=2.29.0",
+    "pystonic>=0.1.3",
     "rich>=14.3.3",
 ]
 
 [project.scripts]
 ai-shell = "ai_shell.cmd.main:cli"
 
-[project.optional-dependencies]
-dev = ["pytest>=9.0.2", "ruff>=0.15.6"]
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.15.6",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -40,9 +43,8 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_shell"]
 
-
 [tool.uv.sources]
-pystonic = { url = "https://test-files.pythonhosted.org/packages/d1/13/871615a76376463810d6231a69ecd3e93ae0d4d04b687cc09791f23f8d19/pystonic-0.1.2-py3-none-any.whl" }
+pystonic = { index = "testpypi" }
 
 [[tool.uv.index]]
 name = "tencent"
@@ -50,5 +52,6 @@ url = "http://mirrors.cloud.tencent.com/pypi/simple"
 
 [[tool.uv.index]]
 name = "testpypi"
-url = "https://test.pypi.org/simple"
-publish-url = "https://test.pypi.org/legacy/"
+url = "https://test.pypi.org/simple/"
+explicit = true
+

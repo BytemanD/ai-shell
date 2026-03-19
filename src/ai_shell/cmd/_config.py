@@ -18,3 +18,9 @@ def list():
     click.secho(f"配置文件: {CONF.get_conf_file()}", fg="cyan")
     click.echo()
     click.echo(toml.dumps(CONF.model_dump(mode="json")))
+
+
+@config.command()
+def save():
+    CONF.save()
+    click.secho(f"保存到配置文件: {CONF.get_conf_file()}", fg="green")

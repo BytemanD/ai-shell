@@ -1,6 +1,7 @@
 import logging
 
 import click
+from pystonic.utils.system import reset_encoding
 
 from ai_shell.cmd import _provider
 from ai_shell.core.ai import AIShell
@@ -18,7 +19,7 @@ log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
 @click.option("-v", "--verbose", count=True)
 def cli(verbose: int):
     """AI-SHELL: 一个智能终端工具"""
-
+    reset_encoding()
     logging.basicConfig(
         level=log_levels[min(verbose, len(log_levels) - 1)],
         format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",

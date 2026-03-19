@@ -48,7 +48,11 @@ class AIShell:
             timeout=self.provider.timeout,
         )
         self.model = self.provider.model
+        # TODO
+        # 记录聊天记录
+        # 设置聊天记录保存条数
         self.messages: List[ChatCompletionMessageParam] = []
+
         system_prompt = (CONF.system_prompt.strip() + SYSTEM_PROMPT_NOTE).format(
             name=self.shell.platform,
             version=self.shell.version,
@@ -100,7 +104,7 @@ class AIShell:
         for chunk in completion:
             if not chunk.choices:
                 break
-            if hasattr(chunk.choices[0].delta, "reasoning_content"):
+            if getattr(chunk.choices[0].delta, "reasoning_content"):
                 # 思考
                 click.secho(
                     getattr(chunk.choices[0].delta, "reasoning_content"),
