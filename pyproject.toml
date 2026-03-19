@@ -1,7 +1,7 @@
 [project]
 name = "ai-shell"
-version = "0.1.4"
-description = "AI 智能终端工具 - 将自然语言转换为可执行的终端命令"
+dynamic = ["version"]
+description = "AI Shell - A shell for AI"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -37,8 +37,11 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_shell"]
