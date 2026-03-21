@@ -1,11 +1,9 @@
 import logging
-from pathlib import Path
 from typing import Dict, List, Optional
 
+from loguru import logger
 from pydantic import BaseModel, HttpUrl
 from pystonic.conf import BaseAppConfig
-
-LOG = logging.getLogger(__name__)
 
 DEFAULT_SYSTEM_PROMPT = """你是一个操作系统专家，擅长使用命令处理用户的任务。
 当用户向你描述他们想要完成的任务时，你的职责是：
@@ -33,10 +31,17 @@ class AppConfig(BaseAppConfig):
     input_prompt: str = "请输入你的意图"
     exit_keys: List[str] = ["exit", "quit", "q"]
     use_provider: str = "alibaba"
-    providers: List[ProviderConfig] = []
+    providers: List[ProviderConfig] = [
+        ProviderConfig(
+            name="alibaba",
+            base_url=HttpUrl("https://dashscope.aliyuncs.com/compatible-mode/v1"),
+            model="qwen-plus",
+            api_key="",
+        )
+    ]
 
     def add_provider(self, provider: ProviderConfig):
-        LOG.info("add provider: %s", provider)
+        logger.info("add provider: {}", provider)
         self.providers.append(provider)
 
     def get_providers(self) -> List[str]:
@@ -49,17 +54,13 @@ class AppConfig(BaseAppConfig):
             raise ValueError(f"Provider '{provider_name}' not found in configuration")
         return provider
 
+    @classmethod
+    def setup(cls):
+        config = super().setup()
+        logging.basicConfig(
+            level=config.log.level,
+            format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
+        )
+        return config
 
-CONF = AppConfig.setup(
-    {
-        "providers": [
-            ProviderConfig(
-                name="alibaba",
-                base_url=HttpUrl("https://dashscope.aliyuncs.com/compatible-mode/v1"),
-                model="qwen-plus",
-                api_key="",
-            )
-        ]
-    },
-    toml_files=[Path.home().joinpath(".config", "ai-shell", "ai-shell.toml")],
-)
+CONF = AppConfig.setup()

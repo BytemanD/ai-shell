@@ -1,9 +1,9 @@
 import atexit
-import logging
 from enum import Enum
 from typing import Callable, Dict, List
 
 import click
+from loguru import logger
 from openai import OpenAI
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
@@ -18,8 +18,6 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ai_shell.common.conf import CONF
-
-LOG = logging.getLogger(__name__)
 
 
 class MessageRole(str, Enum):
@@ -60,13 +58,13 @@ class AIShell:
         )
         self.actions = load_actions()
 
-        LOG.info("system prompt: %s", system_prompt)
+        logger.info("system prompt: {}", system_prompt)
         self._add_message(content=system_prompt, role=MessageRole.SYSTEM)
 
         atexit.register(self.close)
 
     def close(self):
-        LOG.info("Closing OpenAI session")
+        logger.info("Closing OpenAI session")
         self.openai.close()
 
     def _add_message(self, content: str, role: MessageRole):
@@ -136,7 +134,7 @@ class AIShell:
     def chat(self):
         click.echo(f"系统: {self.shell.platform}")
         click.echo(f"版本: {self.shell.version}")
-        LOG.info("use model: %s", self.model)
+        logger.info("use model: {}", self.model)
 
         while True:
             user_input = click.prompt(
@@ -156,12 +154,12 @@ class AIShell:
             return
         console = Console()
         answer = self._ask_with_stream(user_input)
-        LOG.info("answer: %s", answer)
+        logger.info("answer: {}", answer)
         if "无法识别意图" in answer:
             return
         console.print(Panel(Markdown(answer), border_style="green"))
         code_blocks = textutil.find_code_blocks_from_markdown(answer)
-        LOG.info("matched code blocks: %s", code_blocks)
+        logger.info("matched code blocks: {}", code_blocks)
         if not code_blocks:
             click.secho("无可执行命令", fg="red")
             return
