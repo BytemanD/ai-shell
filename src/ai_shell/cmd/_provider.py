@@ -1,4 +1,3 @@
-import logging
 from urllib.parse import urlparse
 
 import click
@@ -12,8 +11,6 @@ from rich.table import Table
 from ai_shell.common.conf import CONF, ProviderConfig
 from ai_shell.core.ai import AIShell
 
-LOG = logging.getLogger(__name__)
-
 
 @click.group()
 def provider():
@@ -23,7 +20,7 @@ def provider():
 @provider.command()
 @click.option("--detail", is_flag=True, help="显示详细配置")
 def list(detail: bool):
-    """查看"""
+    """查看提供商"""
     console = Console()
     table = Table(header_style="bold")
     table.add_column("Name")
@@ -60,7 +57,7 @@ def add(
     enable_thinking: bool = False,
     use: bool = False,
 ):
-    """添加"""
+    """添加提供商"""
     if urlparse(base_url).scheme == "":
         raise click.BadParameter("base-url must be a valid URL", param_hint="base-url")
 
@@ -81,6 +78,7 @@ def add(
     if use:
         CONF.use_provider = name
     CONF.save()
+    click.secho("add provider success")
 
 
 @provider.command()
@@ -96,7 +94,7 @@ def update(
     timeout: int = 10,
     enable_thinking: bool = False,
 ):
-    """更新"""
+    """更新提供商"""
     if name not in CONF.get_providers():
         raise click.ClickException(
             f"provider '{name}' not found. Available: {', '.join(CONF.get_providers())}",
@@ -131,7 +129,7 @@ def update(
 @provider.command()
 @click.argument("name")
 def remove(name: str, use: bool = False):
-    """删除"""
+    """删除提供商"""
     if name not in CONF.get_providers():
         raise click.ClickException(
             f"provider '{name}' not found. Available providers: {', '.join(CONF.get_providers())}",
@@ -148,17 +146,23 @@ def remove(name: str, use: bool = False):
 @provider.command()
 @click.argument("name")
 def use(name: str):
-    """使用"""
+    """切换提供商"""
     if name not in CONF.get_providers():
         raise click.ClickException(
             f"provider '{name}' not found. Available providers: {', '.join(CONF.get_providers())}",
         )
     CONF.use_provider = name
     CONF.save()
+    click.secho(f"changed provider to {name}", fg="green")
 
 
-@provider.command()
-def models():
+@click.group()
+def model():
+    """模型管理"""
+
+
+@model.command("list")
+def list_model():
     """列出模型"""
     click.secho(f"Provider: {CONF.use_provider}", fg="cyan")
     click.echo("Models:")
@@ -173,3 +177,16 @@ def models():
     )
 
     console.print(columns)
+
+
+@model.command("use")
+@click.argument("name")
+def use_model(name: str):
+    """切换模型"""
+    for provider in CONF.providers:
+        if provider.name != CONF.use_provider:
+            continue
+        provider.model = name
+        CONF.save()
+        click.secho(f"changeds model to {name}", fg="green")
+        break

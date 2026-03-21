@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ai-shell = "ai_shell.cmd.main:cli"
+ai-shell = "ai_shell.cmd.cli:main"
 
 [dependency-groups]
 dev = [
