@@ -1,5 +1,6 @@
 import atexit
 from enum import Enum
+from pathlib import Path
 from typing import Callable, Dict, List
 
 import click
@@ -58,14 +59,17 @@ class AIShell:
         )
         self.actions = load_actions()
 
-        logger.info("system prompt: {}", system_prompt)
+        logger.debug("system prompt: {}", system_prompt)
         self._add_message(content=system_prompt, role=MessageRole.SYSTEM)
 
         atexit.register(self.close)
 
     def close(self):
-        logger.info("Closing OpenAI session")
+        logger.debug("Closing OpenAI session")
         self.openai.close()
+        conf_path = conf.CONF.get_conf_file()
+        if not conf_path:
+            conf_path = Path.home().joinpath(".config", "ai-shell", "messages.yaml")
 
     def _add_message(self, content: str, role: MessageRole):
         if role == MessageRole.SYSTEM:
@@ -146,9 +150,10 @@ class AIShell:
             )
             if user_input in conf.CONF.exit_keys:
                 break
-            self.ai_run(user_input)
+            self.run(user_input)
 
-    def ai_run(self, user_input: str):
+    def run(self, user_input: str):
+        logger.info("use model: {}", self.model)
         if user_input in self.actions:
             self.actions[user_input](self)
             return

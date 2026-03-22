@@ -1,6 +1,8 @@
 import click
 import toml
 
+from ai_shell.common.conf import AppConfig
+
 
 @click.group()
 def config():
@@ -9,16 +11,15 @@ def config():
 
 @config.command()
 def list():
-    from ai_shell.common.conf import CONF
+    config = AppConfig.model_validate({})
 
-    click.secho(f"配置文件: {CONF.get_conf_file()}", fg="cyan")
+    click.secho(f"配置文件: {AppConfig.get_conf_file()}", fg="cyan")
     click.echo()
-    click.echo(toml.dumps(CONF.model_dump(mode="json")))
+    click.echo(toml.dumps(config.model_dump(mode="json")))
 
 
 @config.command()
 def save():
-    from ai_shell.common.conf import CONF
-
-    CONF.save()
-    click.secho(f"保存到配置文件: {CONF.get_conf_file()}", fg="green")
+    config = AppConfig.model_validate({})
+    config.save(exclude_defaults=True)
+    click.secho(f"保存到配置文件: {AppConfig.get_conf_file()}", fg="green")

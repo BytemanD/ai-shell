@@ -1,9 +1,13 @@
 import logging
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from loguru import logger
 from pydantic import BaseModel, HttpUrl
 from pystonic.conf import BaseAppConfig
+
+DEFAULT_CONF_PATH = Path.home().joinpath(".config", "ai-shell")
+DEFAULT_CONF_FILE = "ai-shell.toml"
 
 DEFAULT_SYSTEM_PROMPT = """你是一个操作系统专家，擅长使用命令处理用户的任务。
 当用户向你描述他们想要完成的任务时，你的职责是：
@@ -54,12 +58,16 @@ class AppConfig(BaseAppConfig):
             raise ValueError(f"Provider '{provider_name}' not found in configuration")
         return provider
 
-    def setup(self):
-        super().setup()
-        logging.basicConfig(
-            level=self.log.level,
-            format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
-        )
+    def init_hook(self):
+        super().init_hook()
+        if self.log.level != 'WARNING':
+            logger.debug('init logging base config')
+            logging.basicConfig(
+                level="DEBUG" if self.log.level == "TRACE" else self.log.level,
+                format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
+            )
 
 
-CONF = AppConfig.init()
+AppConfig.setup(toml_file=DEFAULT_CONF_PATH.joinpath(DEFAULT_CONF_FILE))
+
+CONF = AppConfig.model_validate()

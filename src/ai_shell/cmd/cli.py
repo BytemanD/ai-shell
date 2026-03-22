@@ -1,10 +1,7 @@
-
 import click
 
-from ai_shell.cmd import _config, _provider
+from ai_shell.cmd import _config, _provider, app
 from ai_shell.core.ai import AIShell
-
-from . import app
 
 
 @app.command()
@@ -21,7 +18,7 @@ def chat(yes: bool):
 def run(user_input: str, yes: bool):
     """执行模式"""
     aishell = AIShell(yes=yes)
-    aishell.ai_run(user_input)
+    aishell.run(user_input)
 
 
 def main():
