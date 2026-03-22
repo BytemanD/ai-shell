@@ -8,6 +8,9 @@ from rich.console import Console
 from rich.padding import Padding
 from rich.table import Table
 
+from ai_shell.common import conf
+from ai_shell.core.ai import AIShell
+
 
 @click.group()
 def provider():
@@ -171,13 +174,9 @@ def model():
 @model.command("list")
 def list_model():
     """列出模型"""
-
-    from ai_shell.common.conf import CONF
-    from ai_shell.core.ai import AIShell
-
-    click.secho(f"Provider: {CONF.use_provider}", fg="cyan")
-    click.echo("Models:")
     aishell = AIShell()
+    click.secho(f"Provider: {aishell.provider.name}", fg="cyan")
+    click.echo("Models:")
 
     console = Console()
     columns = Columns(
@@ -194,12 +193,16 @@ def list_model():
 @click.argument("name")
 def use_model(name: str):
     """切换模型"""
-    from ai_shell.common.conf import CONF
-
-    for provider in CONF.providers:
-        if provider.name != CONF.use_provider:
+    aishell = AIShell()
+    if name not in aishell.list_model():
+        raise click.ClickException(
+            f"model '{name}' not found for provider '{aishell.provider.name}'"
+        )
+    config = conf.AppConfig.model_validate({})
+    for provider in config.providers:
+        if provider.name != config.ai_shell.use_provider:
             continue
         provider.model = name
-        CONF.save()
+        config.save(exclude_defaults=True)
         click.secho(f"changeds model to {name}", fg="green")
         break

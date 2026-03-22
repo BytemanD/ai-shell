@@ -1,5 +1,7 @@
 import atexit
+import importlib
 import io
+from datetime import datetime
 from typing import Callable, Dict
 
 import click
@@ -13,16 +15,14 @@ from pystonic.utils import textutil
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.rule import Rule
 
 from ai_shell.common import conf
 from ai_shell.core.message import MessageHistory, MessageRole
 
 SYSTEM_PROMPT_NOTICE = """
-当前系统: {name}
-版本: {version}
-终端: {terminal}
+{info}
 
-如果无法识别用户的需求，直接回复 '无法识别意图'。
 """
 
 
@@ -39,35 +39,43 @@ class AIShell:
         self.model = self.provider.model
 
         self.system_message = ChatCompletionSystemMessageParam(
-            content=(
-                conf.CONF.ai_shell.system_prompt.strip() + SYSTEM_PROMPT_NOTICE
-            ).format(
-                name=self.shell.platform,
-                version=self.shell.version,
-                terminal=self.shell.terminal,
-            ),
+            content=conf.CONF.ai_shell.system_prompt.strip()
+            + SYSTEM_PROMPT_NOTICE.format(info=self.system_info()),
             role=MessageRole.SYSTEM,
         )
-        logger.debug("system prompt: {}", self.system_message["content"])
 
         self.actions = load_actions()
         self.message_history = MessageHistory()
+        self.console = Console()
+
+        logger.debug("system prompt: {}", self.system_message["content"])
+        logger.info("provider: {}, model: {}", self.provider.name, self.model)
 
         atexit.register(self.close)
+
+    def provider_info(self):
+        return f"提供商: {self.provider.name}\n模  型: {self.model}"
+
+    def system_info(self):
+        return (
+            f"系  统: {self.shell.platform} {self.shell.version}\n"
+            f"终  端: {self.shell.terminal}"
+        )
 
     def close(self):
         logger.debug("Closing OpenAI session")
         self.openai.close()
         self.message_history.save()
 
-    def _ask_with_stream(self, question: str):
+    def _ask_with_stream(self):
         """Ask the question to the model"""
-        completion = self.openai.chat.completions.create(
-            model=self.model,
-            messages=[self.system_message] + self.message_history.get_messages(),
-            stream=True,
-            extra_body=self.provider.extra_body,
-        )
+        with self.console.status("thinking..."):
+            completion = self.openai.chat.completions.create(
+                model=self.model,
+                messages=[self.system_message] + self.message_history.get_messages(),
+                stream=True,
+                extra_body=self.provider.extra_body,
+            )
         answer = io.StringIO()
         status = "answer"
         click.secho("AI: ", fg="bright_white", bg="magenta")
@@ -104,11 +112,17 @@ class AIShell:
         return [x.id for x in self.openai.models.list()]
 
     def chat(self):
-        click.echo(f"系统: {self.shell.platform}")
-        click.echo(f"版本: {self.shell.version}")
-        logger.info("use model: {}", self.model)
+        self.console.print(
+            Panel(
+                f"{self.system_info()}\n{self.provider_info()}",
+                title=f"AI-Shell {importlib.metadata.version('ai-shell')}",
+            )
+        )
 
         while True:
+            self.console.print(
+                Rule(datetime.now().isoformat(sep=" "), characters="■", style="cyan")
+            )
             user_input = click.prompt(
                 click.style(
                     conf.CONF.ai_shell.input_prompt,
@@ -121,35 +135,33 @@ class AIShell:
             self.run(user_input)
 
     def run(self, user_input: str):
-        logger.info("use model: {}", self.model)
         if user_input in self.actions:
             self.actions[user_input](self)
             return
-        console = Console()
         self.message_history.add_message(content=user_input, role=MessageRole.USER)
-        answer = self._ask_with_stream(user_input)
+        answer = self._ask_with_stream()
         logger.info("answer: {}", answer)
         if "无法识别意图" in answer:
             self.message_history.messages.pop()
             return
         self.message_history.add_message(content=answer, role=MessageRole.ASSISTANT)
-        if "警告:" in answer:
-            console.print(Panel(Markdown(answer), border_style="red"))
-        else:
-            console.print(Panel(Markdown(answer), border_style="green"))
-
         code_blocks = textutil.find_code_blocks_from_markdown(answer)
         logger.info("matched code blocks: {}", code_blocks)
         if not code_blocks:
-            click.secho("无可执行命令", fg="red")
             return
+        if "警告:" in answer:
+            self.console.print(
+                Panel(Markdown(answer), expand=False, border_style="red")
+            )
+        else:
+            self.console.print(Panel(Markdown(answer), border_style="green"))
 
         if self.yes or click.confirm("是否执行?"):
-            click.secho("开始执行...", fg="yellow")
+            self.console.print("开始执行...", style="yellow")
+            self.console.print("~~~~~~~~~~~~~~~~~~~")
             for code_block in code_blocks:
-                click.echo("~~~~~~~~~~~~~~~~~~~")
                 self.shell.execute(code_block)
-                click.echo("~~~~~~~~~~~~~~~~~~~")
+            self.console.print("~~~~~~~~~~~~~~~~~~~")
 
 
 def load_actions() -> Dict[str, Callable[[AIShell], None]]:
