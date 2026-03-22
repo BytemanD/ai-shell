@@ -1,11 +1,10 @@
 from typing import Dict
 
 import click
+from ai_shell.core.message import MessageHistory
 from rich.align import Align
 from rich.console import Console
 from rich.panel import Panel
-
-from ai_shell.core.message import MessageHistory
 
 
 @click.group()

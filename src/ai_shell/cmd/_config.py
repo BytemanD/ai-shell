@@ -1,6 +1,5 @@
 import click
 import toml
-
 from ai_shell.common.conf import AppConfig
 
 

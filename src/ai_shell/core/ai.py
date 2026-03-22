@@ -141,7 +141,7 @@ class AIShell:
         self.message_history.add_message(content=user_input, role=MessageRole.USER)
         answer = self._ask_with_stream()
         logger.info("answer: {}", answer)
-        if "无法识别意图" in answer:
+        if "无法识别" in answer:
             self.message_history.messages.pop()
             return
         self.message_history.add_message(content=answer, role=MessageRole.ASSISTANT)

@@ -2,14 +2,13 @@ from urllib.parse import urlparse
 
 import click
 import toml
+from ai_shell.common import conf
+from ai_shell.core.ai import AIShell
 from pydantic import HttpUrl
 from rich.columns import Columns
 from rich.console import Console
 from rich.padding import Padding
 from rich.table import Table
-
-from ai_shell.common import conf
-from ai_shell.core.ai import AIShell
 
 
 @click.group()
