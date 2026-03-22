@@ -1,16 +1,12 @@
 import atexit
-from enum import Enum
-from pathlib import Path
-from typing import Callable, Dict, List
+import io
+from typing import Callable, Dict
 
 import click
 from loguru import logger
 from openai import OpenAI
 from openai.types.chat import (
-    ChatCompletionAssistantMessageParam,
-    ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
-    ChatCompletionUserMessageParam,
 )
 from pystonic.shell import Shell
 from pystonic.utils import textutil
@@ -19,13 +15,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ai_shell.common import conf
-
-
-class MessageRole(str, Enum):
-    SYSTEM = "system"
-    USER = "user"
-    ASSISTANT = "assistant"
-
+from ai_shell.core.message import MessageHistory, MessageRole
 
 SYSTEM_PROMPT_NOTICE = """
 当前系统: {name}
@@ -47,60 +37,37 @@ class AIShell:
             timeout=self.provider.timeout,
         )
         self.model = self.provider.model
-        # TODO
-        # 记录聊天记录
-        # 设置聊天记录保存条数
-        self.messages: List[ChatCompletionMessageParam] = []
 
-        system_prompt = (conf.CONF.system_prompt.strip() + SYSTEM_PROMPT_NOTICE).format(
-            name=self.shell.platform,
-            version=self.shell.version,
-            terminal=self.shell.terminal,
+        self.system_message = ChatCompletionSystemMessageParam(
+            content=(conf.CONF.ai_shell.system_prompt.strip() + SYSTEM_PROMPT_NOTICE).format(
+                name=self.shell.platform,
+                version=self.shell.version,
+                terminal=self.shell.terminal,
+            ),
+            role=MessageRole.SYSTEM,
         )
-        self.actions = load_actions()
+        logger.debug("system prompt: {}", self.system_message["content"])
 
-        logger.debug("system prompt: {}", system_prompt)
-        self._add_message(content=system_prompt, role=MessageRole.SYSTEM)
+        self.actions = load_actions()
+        self.message_history = MessageHistory()
+        self.message_history.load()
 
         atexit.register(self.close)
 
     def close(self):
         logger.debug("Closing OpenAI session")
         self.openai.close()
-        conf_path = conf.CONF.get_conf_file()
-        if not conf_path:
-            conf_path = Path.home().joinpath(".config", "ai-shell", "messages.yaml")
-
-    def _add_message(self, content: str, role: MessageRole):
-        if role == MessageRole.SYSTEM:
-            self.messages.append(
-                ChatCompletionSystemMessageParam(
-                    content=content, role=MessageRole.SYSTEM.value
-                )
-            )
-        elif role == MessageRole.ASSISTANT:
-            self.messages.append(
-                ChatCompletionAssistantMessageParam(
-                    content=content, role=MessageRole.ASSISTANT.value
-                )
-            )
-        else:
-            self.messages.append(
-                ChatCompletionUserMessageParam(
-                    content=content, role=MessageRole.USER.value
-                )
-            )
+        self.message_history.save()
 
     def _ask_with_stream(self, question: str):
         """Ask the question to the model"""
-        self._add_message(content=question, role=MessageRole.USER)
         completion = self.openai.chat.completions.create(
             model=self.model,
-            messages=self.messages,
+            messages=[self.system_message] + self.message_history.get_messages(),
             stream=True,
             extra_body=self.provider.extra_body,
         )
-        answer = ""
+        answer = io.StringIO()
         status = "answer"
         click.secho("AI: ", fg="bright_white", bg="magenta")
         for chunk in completion:
@@ -121,7 +88,7 @@ class AIShell:
                 continue
             click.echo(content, nl=False)
             if status == "answer":
-                answer += content
+                answer.write(content)
                 continue
             if "</think>" in content:
                 status = "think_end"
@@ -130,7 +97,7 @@ class AIShell:
                 status = "think_start"
                 continue
         click.echo()
-        return answer.strip()
+        return answer.getvalue().strip()
 
     def list_model(self):
         return [x.id for x in self.openai.models.list()]
@@ -143,12 +110,12 @@ class AIShell:
         while True:
             user_input = click.prompt(
                 click.style(
-                    conf.CONF.input_prompt,
+                    conf.CONF.ai_shell.input_prompt,
                     fg="bright_white",
                     bg="cyan",
                 )
             )
-            if user_input in conf.CONF.exit_keys:
+            if user_input in conf.CONF.ai_shell.exit_keys:
                 break
             self.run(user_input)
 
@@ -158,17 +125,24 @@ class AIShell:
             self.actions[user_input](self)
             return
         console = Console()
+        self.message_history.add_message(content=user_input, role=MessageRole.USER)
         answer = self._ask_with_stream(user_input)
         logger.info("answer: {}", answer)
         if "无法识别意图" in answer:
+            self.message_history.messages.pop()
             return
-        console.print(Panel(Markdown(answer), border_style="green"))
+        self.message_history.add_message(content=answer, role=MessageRole.ASSISTANT)
+        if "警告:" in answer:
+            console.print(Panel(Markdown(answer), border_style="red"))
+        else:
+            console.print(Panel(Markdown(answer), border_style="green"))
+
         code_blocks = textutil.find_code_blocks_from_markdown(answer)
         logger.info("matched code blocks: {}", code_blocks)
         if not code_blocks:
             click.secho("无可执行命令", fg="red")
             return
-        self._add_message(content=answer, role=MessageRole.ASSISTANT)
+
         if self.yes or click.confirm("是否执行?"):
             click.secho("开始执行...", fg="yellow")
             for code_block in code_blocks:

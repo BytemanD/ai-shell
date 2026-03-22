@@ -1,3 +1,4 @@
+
 import click
 
 from ai_shell.cmd import _config, _provider, app
