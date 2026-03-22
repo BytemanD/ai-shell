@@ -54,13 +54,12 @@ class AppConfig(BaseAppConfig):
             raise ValueError(f"Provider '{provider_name}' not found in configuration")
         return provider
 
-    @classmethod
-    def setup(cls):
-        config = super().setup()
+    def setup(self):
+        super().setup()
         logging.basicConfig(
-            level=config.log.level,
+            level=self.log.level,
             format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
         )
-        return config
 
-CONF = AppConfig.setup()
+
+CONF = AppConfig.init()

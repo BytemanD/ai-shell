@@ -17,7 +17,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from ai_shell.common.conf import CONF
+from ai_shell.common import conf
 
 
 class MessageRole(str, Enum):
@@ -39,7 +39,7 @@ class AIShell:
     def __init__(self, yes=False):
         self.shell = Shell()
         self.yes = yes
-        self.provider = CONF.get_used_provider()
+        self.provider = conf.CONF.get_used_provider()
         self.openai = OpenAI(
             api_key=self.provider.api_key,
             base_url=str(self.provider.base_url),
@@ -51,7 +51,7 @@ class AIShell:
         # 设置聊天记录保存条数
         self.messages: List[ChatCompletionMessageParam] = []
 
-        system_prompt = (CONF.system_prompt.strip() + SYSTEM_PROMPT_NOTICE).format(
+        system_prompt = (conf.CONF.system_prompt.strip() + SYSTEM_PROMPT_NOTICE).format(
             name=self.shell.platform,
             version=self.shell.version,
             terminal=self.shell.terminal,
@@ -139,12 +139,12 @@ class AIShell:
         while True:
             user_input = click.prompt(
                 click.style(
-                    CONF.input_prompt,
+                    conf.CONF.input_prompt,
                     fg="bright_white",
                     bg="cyan",
                 )
             )
-            if user_input in CONF.exit_keys:
+            if user_input in conf.CONF.exit_keys:
                 break
             self.ai_run(user_input)
 

@@ -1,43 +1,16 @@
 
-from enum import Enum, auto
-from pathlib import Path
-
 import click
-from pystonic.conf import BaseAppConfig
 
-from ai_shell.cmd import _provider
+from ai_shell.cmd import _config, _provider
+from ai_shell.core.ai import AIShell
 
-from . import _config
+from . import app
 
-
-class LogLevel(int, Enum):
-    INFO = auto()
-    DEBUG = auto()
-    TRACE = auto()
-
-
-@click.group(
-    context_settings=dict(help_option_names=["-h", "--help"], show_default=True)
-)
-@click.option("-v", "--verbose", count=True)
-def app(verbose: int):
-    """AI-SHELL: 一个智能终端工具"""
-    # reset_encoding()
-    init_settings = {}
-    toml_file = Path.home().joinpath(".config", "ai-shell", "ai-shell.toml")
-    if verbose:
-        init_settings.setdefault("log", {})["level"] = LogLevel(
-            min(verbose, max(LogLevel).value)
-        ).name
-
-    BaseAppConfig.set(init_settings=init_settings, toml_files=[toml_file])
 
 @app.command()
 @click.option("-y", "--yes", is_flag=True, help="yes to run")
 def chat(yes: bool):
     """交互模式"""
-    from ai_shell.core.ai import AIShell
-    
     aishell = AIShell(yes=yes)
     aishell.chat()
 
@@ -47,8 +20,6 @@ def chat(yes: bool):
 @click.option("-y", "--yes", is_flag=True, help="yes to run")
 def run(user_input: str, yes: bool):
     """执行模式"""
-    from ai_shell.core.ai import AIShell
-    
     aishell = AIShell(yes=yes)
     aishell.ai_run(user_input)
 
