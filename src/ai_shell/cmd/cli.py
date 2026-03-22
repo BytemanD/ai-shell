@@ -1,7 +1,6 @@
-
 import click
 
-from ai_shell.cmd import _config, _provider, app
+from ai_shell.cmd import _config, _message, _provider, app
 from ai_shell.core.ai import AIShell
 
 
@@ -26,6 +25,7 @@ def main():
     app.add_command(_config.config)
     app.add_command(_provider.provider)
     app.add_command(_provider.model)
+    app.add_command(_message.message)
     app()
 
 

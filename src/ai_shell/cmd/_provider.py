@@ -174,6 +174,7 @@ def list_model():
 
     from ai_shell.common.conf import CONF
     from ai_shell.core.ai import AIShell
+
     click.secho(f"Provider: {CONF.use_provider}", fg="cyan")
     click.echo("Models:")
     aishell = AIShell()
@@ -202,3 +203,4 @@ def use_model(name: str):
         CONF.save()
         click.secho(f"changeds model to {name}", fg="green")
         break
+

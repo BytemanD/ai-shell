@@ -18,10 +18,6 @@ class LogLevel(int, Enum):
 @click.option("-v", "--verbose", count=True)
 def app(verbose: int):
     """AI-SHELL: 一个智能终端工具"""
-    from pystonic.utils import system
-    system.reset_encoding()
-    os.environ['PYTHONUTF8'] = '1'
-    os.environ['PYTHONIOENCODING'] = 'utf-8'
     
     init_settings = {}
     if verbose:

@@ -50,7 +50,6 @@ class AIShell:
 
         self.actions = load_actions()
         self.message_history = MessageHistory()
-        self.message_history.load()
 
         atexit.register(self.close)
 
@@ -152,9 +151,4 @@ class AIShell:
 
 
 def load_actions() -> Dict[str, Callable[[AIShell], None]]:
-    from ai_shell.core.ai_actions import print_actions, print_messages
-
-    return {
-        "/messages": print_messages,
-        "/actions": print_actions,
-    }
+    return {}

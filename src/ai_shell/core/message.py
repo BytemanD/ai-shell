@@ -29,6 +29,7 @@ class MessageHistory:
             conf_path = Path.home().joinpath(".config", "ai-shell")
         self.file_path = conf_path.joinpath("messages.json")
         self.messages: List[ChatCompletionMessageParam] = []
+        self.load()
 
     def add_message(self, content: str, role: MessageRole):
         if role == MessageRole.SYSTEM:
