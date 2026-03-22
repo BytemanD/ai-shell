@@ -14,9 +14,13 @@ def message():
 
 
 @message.command()
-def list():
+@click.option("-c", "--count", is_flag=True, help="只输出数量")
+def list(count: True):
     message_history = MessageHistory()
     console = Console()
+    if count:
+        console.print(len(message_history.messages))
+        return
     for message in message_history.messages:
         if not isinstance(message, Dict):
             continue

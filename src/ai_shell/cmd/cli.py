@@ -1,7 +1,12 @@
+import contextlib
+
 import click
 
 from ai_shell.cmd import _config, _message, _provider, app
 from ai_shell.core.ai import AIShell
+
+with contextlib.suppress(ImportError):
+    import readline  # noqa
 
 
 @app.command()
