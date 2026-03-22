@@ -1,4 +1,3 @@
-
 import click
 
 from ai_shell.core.ai import AIShell
@@ -12,5 +11,3 @@ def print_actions(shell: AIShell):
         else:
             fucn_doc = "No doc"
         click.echo(f"{action:<20} {fucn_doc}")
-
-

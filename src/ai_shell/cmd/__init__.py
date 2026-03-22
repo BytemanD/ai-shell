@@ -1,4 +1,3 @@
-import os
 from enum import Enum, auto
 
 import click
@@ -18,7 +17,7 @@ class LogLevel(int, Enum):
 @click.option("-v", "--verbose", count=True)
 def app(verbose: int):
     """AI-SHELL: 一个智能终端工具"""
-    
+
     init_settings = {}
     if verbose:
         init_settings.setdefault("log", {})["level"] = LogLevel(

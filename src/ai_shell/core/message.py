@@ -52,7 +52,7 @@ class MessageHistory:
             )
 
     def get_messages(self):
-        return self.messages[-conf.CONF.ai_shell.message_window:]
+        return self.messages[-conf.CONF.ai_shell.message_window :]
 
     def load(self):
         logger.debug("loading messages from %s", self.file_path)

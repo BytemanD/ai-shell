@@ -203,4 +203,3 @@ def use_model(name: str):
         CONF.save()
         click.secho(f"changeds model to {name}", fg="green")
         break
-

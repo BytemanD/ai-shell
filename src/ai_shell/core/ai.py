@@ -39,7 +39,9 @@ class AIShell:
         self.model = self.provider.model
 
         self.system_message = ChatCompletionSystemMessageParam(
-            content=(conf.CONF.ai_shell.system_prompt.strip() + SYSTEM_PROMPT_NOTICE).format(
+            content=(
+                conf.CONF.ai_shell.system_prompt.strip() + SYSTEM_PROMPT_NOTICE
+            ).format(
                 name=self.shell.platform,
                 version=self.shell.version,
                 terminal=self.shell.terminal,
