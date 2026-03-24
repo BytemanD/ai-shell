@@ -1,14 +1,16 @@
+import asyncio
 from urllib.parse import urlparse
 
 import click
 import toml
-from ai_shell.common import conf
-from ai_shell.core.ai import AIShell
 from pydantic import HttpUrl
 from rich.columns import Columns
 from rich.console import Console
 from rich.padding import Padding
 from rich.table import Table
+
+from ai_shell.common import conf
+from ai_shell.core.ai import ShellAgent
 
 
 @click.group()
@@ -173,29 +175,28 @@ def model():
 @model.command("list")
 def list_model():
     """列出模型"""
-    aishell = AIShell()
-    click.secho(f"Provider: {aishell.provider.name}", fg="cyan")
+    shell_agent = ShellAgent()
+    click.secho(f"Provider: {shell_agent.provider.name}", fg="cyan")
     click.echo("Models:")
 
-    console = Console()
     columns = Columns(
         [
-            x if x != aishell.model else Padding(x, style="bold green")
-            for x in aishell.list_model()
+            x if x != shell_agent.model else Padding(x, style="bold green")
+            for x in asyncio.run(shell_agent.list_model())
         ]
     )
 
-    console.print(columns)
+    shell_agent.console.print(columns)
 
 
 @model.command("use")
 @click.argument("name")
 def use_model(name: str):
     """切换模型"""
-    aishell = AIShell()
-    if name not in aishell.list_model():
+    shell_agent = ShellAgent()
+    if name not in asyncio.run(shell_agent.list_model()):
         raise click.ClickException(
-            f"model '{name}' not found for provider '{aishell.provider.name}'"
+            f"model '{name}' not found for provider '{shell_agent.provider.name}'"
         )
     config = conf.AppConfig.model_validate({})
     for provider in config.providers:
@@ -203,5 +204,5 @@ def use_model(name: str):
             continue
         provider.model = name
         config.save(exclude_defaults=True)
-        click.secho(f"changeds model to {name}", fg="green")
+        click.secho(f"changed model to {name}", fg="green")
         break

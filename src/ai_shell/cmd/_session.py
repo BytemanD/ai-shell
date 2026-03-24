@@ -1,0 +1,71 @@
+import asyncio
+from typing import Optional
+
+import click
+from loguru import logger
+from rich.align import Align
+from rich.console import Console
+from rich.panel import Panel
+
+from ai_shell.common.table import default_rich_table
+from ai_shell.core.session import AgentSession, SessionHisotry
+
+
+@click.group()
+def session():
+    """session管理"""
+
+
+@session.command("list")
+def list_session():
+    """显示会话列表"""
+    session_history = SessionHisotry()
+    table = default_rich_table(AgentSession, session_history.get_agent_sessions())
+    console = Console()
+    console.print(table)
+
+
+@session.command("messages")
+@click.option("-c", "--count", is_flag=True, help="只输出数量")
+@click.option("-s", "--session", type=str, help="session id")
+def list_messages(count: True, session: Optional[str]):
+    """显示会话聊天记录"""
+    session_history = SessionHisotry()
+    try:
+        if session:
+            session_store = session_history.get_session_store(
+                session_id=session, raise_if_not_found=True
+            )
+        else:
+            session_store = session_history.get_session_store(
+                last_session=True, raise_if_not_found=True
+            )
+    except Exception as e:
+        logger.exception(e)
+        raise click.ClickException(str(e))
+
+    items = asyncio.run(session_store.get_items())
+    console = Console()
+    if count:
+        console.print(len(items))
+        return
+
+    for item in items:
+        role: str = item.get("role")
+        content: list = item.get("content")
+        if role == "system":
+            continue
+        if role == "assistant":
+            console.print(
+                Panel(
+                    content[0].get("text") if content else "",
+                    expand=False,
+                    border_style="magenta",
+                )
+            )
+        elif role == "user":
+            console.print(
+                Align.right(
+                    Panel(item.get("content", ""), expand=False, border_style="green")
+                )
+            )
