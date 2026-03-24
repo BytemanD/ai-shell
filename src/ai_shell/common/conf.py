@@ -4,7 +4,8 @@ from typing import Dict, List, Optional
 
 from loguru import logger
 from pydantic import BaseModel, HttpUrl
-from pystonic.conf import BaseAppConfig
+from pydantic_settings import TomlConfigSettingsSource
+from pystonic.conf import BaseAppConfig, BaseSettings, PydanticBaseSettingsSource
 
 DEFAULT_CONF_PATH = Path.home().joinpath(".config", "ai-shell")
 DEFAULT_CONF_FILE = "ai-shell.toml"
@@ -50,7 +51,22 @@ class AppConfig(BaseAppConfig):
             api_key="",
         )
     ]
-
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ):
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+            TomlConfigSettingsSource(settings_cls),
+        )
     def add_provider(self, provider: ProviderConfig):
         logger.info("add provider: {}", provider)
         self.providers.append(provider)

@@ -46,6 +46,7 @@ class SessionHisotry:
         session_id: Optional[str] = None,
         last_session: bool = False,
         raise_if_not_found: bool = False,
+        save_session: bool=True,
     ):
         if not session_id:
             if last_session:
@@ -59,9 +60,9 @@ class SessionHisotry:
             if not items or session_id not in [x.session_id for x in items]:
                 raise SessionNotFound(f"session {session_id} not found")
         if not session_id:
-            logger.warning("no session id, create new one")
+            logger.info("no session id, create new one")
             session_id = f"ses_{uuid.uuid4()}"
-        return SQLiteSession(session_id, db_path=self.store_file)
+        return SQLiteSession(session_id, db_path=self.store_file if save_session else ":memory:")
 
     def _query_agent_session(self, session_id: Optional[str] = None):
         if not self.store_file:

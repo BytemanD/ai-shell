@@ -39,7 +39,7 @@ def list(detail: bool):
         table.add_row(
             provider.name,
             content.strip(),
-            style="cyan" if provider.name == CONF.use_provider else None,
+            style="cyan" if provider.name == CONF.ai_shell.use_provider else None,
         )
 
     console.print(table)
@@ -100,42 +100,32 @@ def update(
     enable_thinking: bool = False,
 ):
     """更新提供商"""
-    from ai_shell.common.conf import CONF, ProviderConfig
+    from ai_shell.common.conf import CONF
 
-    if name not in CONF.get_providers():
+    if base_url and urlparse(base_url).scheme == "":
+        raise click.BadParameter("base-url must be a valid URL", param_hint="base-url")
+    for provider in CONF.providers:
+        if provider.name != name:
+            continue
+        if base_url:
+            provider.base_url = HttpUrl(base_url)
+        if api_key:
+            provider.api_key = api_key
+        if timeout:
+            provider.timeout = timeout
+        if enable_thinking is not None:
+            provider.enable_thinking = enable_thinking
+        CONF.save(exclude_defaults=False)
+        break
+    else:
         raise click.ClickException(
             f"provider '{name}' not found. Available: {', '.join(CONF.get_providers())}",
         )
-    provider = CONF.get_used_provider()
-    if base_url:
-        if urlparse(base_url).scheme == "":
-            raise click.BadParameter(
-                "base-url must be a valid URL", param_hint="base-url"
-            )
-        provider.base_url = HttpUrl(base_url)
-    if api_key:
-        provider.api_key = api_key
-    if timeout:
-        provider.timeout = timeout
-    if enable_thinking is not None:
-        provider.enable_thinking = enable_thinking
-
-    CONF.providers = [provider for provider in CONF.providers if provider.name != name]
-    CONF.add_provider(
-        ProviderConfig(
-            name=name,
-            base_url=HttpUrl(base_url),
-            api_key=api_key,
-            timeout=timeout,
-            enable_thinking=enable_thinking,
-        )
-    )
-    CONF.save()
 
 
 @provider.command()
 @click.argument("name")
-def remove(name: str, use: bool = False):
+def remove(name: str):
     """删除提供商"""
     from ai_shell.common.conf import CONF
 
@@ -143,13 +133,22 @@ def remove(name: str, use: bool = False):
         raise click.ClickException(
             f"provider '{name}' not found. Available providers: {', '.join(CONF.get_providers())}",
         )
-    CONF.providers = [provider for provider in CONF.providers if provider.name != name]
-    CONF.use_provider = CONF.providers[0].name if CONF.providers else ""
-    if CONF.use_provider == "":
+
+    providers = [x for x in CONF.providers if x.name != name]
+    new_conf = CONF.model_copy(
+        update={
+            "providers": providers,
+            "ai_shell": conf.AIShellConfig(
+                use_provider=CONF.providers[0].name if CONF.providers else ""
+            ),
+        },
+        deep=True,
+    )
+    if new_conf.ai_shell.use_provider == "":
         click.secho("No providers left, use_provider set to empty string", fg="red")
     else:
-        click.secho(f"Using provider '{CONF.use_provider}'", fg="yellow")
-    CONF.save()
+        click.secho(f"Using provider '{new_conf.ai_shell.use_provider}'", fg="yellow")
+    new_conf.save()
 
 
 @provider.command()
@@ -162,8 +161,13 @@ def use(name: str):
         raise click.ClickException(
             f"provider '{name}' not found. Available providers: {', '.join(CONF.get_providers())}",
         )
-    CONF.use_provider = name
-    CONF.save()
+    new_conf = CONF.model_copy(
+        update={
+            "ai_shell": conf.AIShellConfig(use_provider=name),
+        },
+        deep=True,
+    )
+    new_conf.save()
     click.secho(f"changed provider to {name}", fg="green")
 
 
@@ -175,7 +179,7 @@ def model():
 @model.command("list")
 def list_model():
     """列出模型"""
-    shell_agent = ShellAgent()
+    shell_agent = ShellAgent(save_session=False)
     click.secho(f"Provider: {shell_agent.provider.name}", fg="cyan")
     click.echo("Models:")
 

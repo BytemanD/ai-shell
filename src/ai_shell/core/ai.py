@@ -32,9 +32,11 @@ SYSTEM_PROMPT_NOTICE = """
 
 class ShellAgent:
     def __init__(
-        self, yes=False, session_id: Optional[str] = None, last_session: bool = False
+        self, yes=False, session_id: Optional[str] = None, last_session: bool = False,
+        save_session: bool = True,
     ):
         self.yes = yes
+        self.save_session = save_session
         self.provider = conf.CONF.get_used_provider()
         self.model = self.provider.model
         self.shell = Shell()
@@ -49,7 +51,8 @@ class ShellAgent:
         self.response_id = None
         self.session_history = SessionHisotry()
         self.session_store = self.session_history.get_session_store(
-            session_id=session_id, last_session=last_session
+            session_id=session_id, last_session=last_session,
+            save_session=self.save_session
         )
         logger.info("session id: {}", self.session_store.session_id)
 
@@ -83,8 +86,10 @@ class ShellAgent:
         result = Runner.run_streamed(
             self.agent,
             user_input,
-            previous_response_id=self.response_id,
             session=self.session_store,
+            # NOTE: 使用了本地本地会话持久化后不能使用以下参数
+            # auto_previous_response_id=True,
+            # previous_response_id=self.response_id,
         )
 
         async for event in result.stream_events():
@@ -96,10 +101,6 @@ class ShellAgent:
         if self.response_id != result.last_response_id:
             self.response_id = result.last_response_id
             logger.info("update response: {}", self.response_id)
-
-        items = await self.session_store.get_items()
-        print("1111111111111111111111")
-        print(items)
 
         return result.final_output
 
@@ -140,7 +141,7 @@ class ShellAgent:
 
         while True:
             self.console.print(
-                Rule(datetime.now().isoformat(sep=" "), characters="■", style="cyan")
+                Rule(datetime.now().isoformat(sep=" "), style="cyan")
             )
             user_input = click.prompt(
                 click.style(
