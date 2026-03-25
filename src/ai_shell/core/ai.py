@@ -1,3 +1,4 @@
+import asyncio
 import atexit
 import importlib
 from datetime import datetime
@@ -32,7 +33,10 @@ SYSTEM_PROMPT_NOTICE = """
 
 class ShellAgent:
     def __init__(
-        self, yes=False, session_id: Optional[str] = None, last_session: bool = False,
+        self,
+        yes=False,
+        session_id: Optional[str] = None,
+        last_session: bool = False,
         save_session: bool = True,
     ):
         self.yes = yes
@@ -51,8 +55,9 @@ class ShellAgent:
         self.response_id = None
         self.session_history = SessionHisotry()
         self.session_store = self.session_history.get_session_store(
-            session_id=session_id, last_session=last_session,
-            save_session=self.save_session
+            session_id=session_id,
+            last_session=last_session,
+            save_session=self.save_session,
         )
         logger.info("session id: {}", self.session_store.session_id)
 
@@ -140,9 +145,7 @@ class ShellAgent:
         )
 
         while True:
-            self.console.print(
-                Rule(datetime.now().isoformat(sep=" "), style="cyan")
-            )
+            self.console.print(Rule(datetime.now().isoformat(sep=" "), style="cyan"))
             user_input = click.prompt(
                 click.style(
                     conf.CONF.ai_shell.input_prompt,
@@ -153,3 +156,15 @@ class ShellAgent:
             if user_input in conf.CONF.ai_shell.exit_keys:
                 break
             await self.run(user_input)
+
+    def get_agent_sessions(self):
+        return self.session_history.get_agent_sessions()
+
+    def delete_agent_session(self, session_id: str):
+        return self.session_history.delete_agent_session(session_id)
+
+    def clearn_session(self, session_id: Optional[str]):
+        session_store = self.session_history.get_session_store(
+            session_id=session_id, last_session=True, raise_if_not_found=True
+        )
+        asyncio.run(session_store.clear_session())

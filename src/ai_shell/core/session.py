@@ -105,11 +105,19 @@ class SessionHisotry:
             return
         return items[0]
 
-    def delete_agent_session(self, session_id: str):
+    async def delete_agent_session(self, session_id: str):
         conn = sqlite3.connect(self.store_file)
 
+        session_store = self.get_session_store(
+            session_id=session_id, raise_if_not_found=True
+        )
+
+        logger.info("clear session messages ...")
+        await session_store.clear_session()
+        session_store.close()
         logger.info("delete session ...")
-        conn.execute("DELETE FROM agent_sessions where session_id = ?", (session_id,))
-        logger.info("delete session messages ...")
-        conn.execute("DELETE FROM agent_messages where session_id = ?", (session_id,))
+        conn.execute(
+            f"DELETE FROM {session_store.sessions_table} where session_id = ?",
+            (session_id,),
+        )
         conn.commit()

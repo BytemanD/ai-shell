@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ai_shell.common.table import default_rich_table
+from ai_shell.core.ai import ShellAgent
 from ai_shell.core.session import AgentSession, SessionHisotry
 
 
@@ -19,19 +20,18 @@ def session():
 @session.command("list")
 def list_session():
     """显示会话列表"""
-    session_history = SessionHisotry()
-    table = default_rich_table(AgentSession, session_history.get_agent_sessions())
-    console = Console()
-    console.print(table)
+    shell_agent = ShellAgent()
+    Console().print(default_rich_table(AgentSession, shell_agent.get_agent_sessions()))
 
 
 @session.command("remove")
 @click.argument("session_id", nargs=-1, required=True)
 def remove_session(session_id: List[str]):
     """删除会话"""
-    session_history = SessionHisotry()
+    shell_agent = ShellAgent()
+
     for item in session_id:
-        session_history.delete_agent_session(item)
+        shell_agent.delete_agent_session(item)
         click.secho(f"removed session {item}", fg="green")
 
 
@@ -39,11 +39,8 @@ def remove_session(session_id: List[str]):
 @click.option("-s", "--session", help="session id")
 def clear_session(session: str):
     """删除会话聊天记录"""
-    session_history = SessionHisotry()
-    session_store = session_history.get_session_store(
-        session_id=session, last_session=True, raise_if_not_found=True
-    )
-    asyncio.run(session_store.clear_session())
+    shell_agent = ShellAgent()
+    session_store = shell_agent.clearn_session(session_id=session)
     click.secho(f"clear session {session_store.session_id} messges success", fg="green")
 
 
