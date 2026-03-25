@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+from typing import List, Optional
 
 import click
 from loguru import logger
@@ -25,6 +25,28 @@ def list_session():
     console.print(table)
 
 
+@session.command("remove")
+@click.argument("session_id", nargs=-1, required=True)
+def remove_session(session_id: List[str]):
+    """删除会话"""
+    session_history = SessionHisotry()
+    for item in session_id:
+        session_history.delete_agent_session(item)
+        click.secho(f"removed session {item}", fg="green")
+
+
+@session.command("clear")
+@click.option("-s", "--session", help="session id")
+def clear_session(session: str):
+    """删除会话聊天记录"""
+    session_history = SessionHisotry()
+    session_store = session_history.get_session_store(
+        session_id=session, last_session=True, raise_if_not_found=True
+    )
+    asyncio.run(session_store.clear_session())
+    click.secho(f"clear session {session_store.session_id} messges success", fg="green")
+
+
 @session.command("messages")
 @click.option("-c", "--count", is_flag=True, help="只输出数量")
 @click.option("-s", "--session", type=str, help="session id")
@@ -44,10 +66,12 @@ def list_messages(count: True, session: Optional[str]):
         logger.exception(e)
         raise click.ClickException(str(e))
 
-    items = asyncio.run(session_store.get_items())
     console = Console()
+    console.print(f"session: {session_store.session_id}", style="cyan")
+
+    items = asyncio.run(session_store.get_items())
     if count:
-        console.print(len(items))
+        click.echo(f"count {len(items)}")
         return
 
     for item in items:

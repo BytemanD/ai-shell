@@ -46,7 +46,7 @@ class SessionHisotry:
         session_id: Optional[str] = None,
         last_session: bool = False,
         raise_if_not_found: bool = False,
-        save_session: bool=True,
+        save_session: bool = True,
     ):
         if not session_id:
             if last_session:
@@ -62,7 +62,9 @@ class SessionHisotry:
         if not session_id:
             logger.info("no session id, create new one")
             session_id = f"ses_{uuid.uuid4()}"
-        return SQLiteSession(session_id, db_path=self.store_file if save_session else ":memory:")
+        return SQLiteSession(
+            session_id, db_path=self.store_file if save_session else ":memory:"
+        )
 
     def _query_agent_session(self, session_id: Optional[str] = None):
         if not self.store_file:
@@ -102,3 +104,12 @@ class SessionHisotry:
         if not items:
             return
         return items[0]
+
+    def delete_agent_session(self, session_id: str):
+        conn = sqlite3.connect(self.store_file)
+
+        logger.info("delete session ...")
+        conn.execute("DELETE FROM agent_sessions where session_id = ?", (session_id,))
+        logger.info("delete session messages ...")
+        conn.execute("DELETE FROM agent_messages where session_id = ?", (session_id,))
+        conn.commit()
