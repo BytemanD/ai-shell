@@ -4,8 +4,8 @@ from typing import Dict, List, Optional
 
 from loguru import logger
 from pydantic import BaseModel, HttpUrl
-from pydantic_settings import TomlConfigSettingsSource
-from pystonic.conf import BaseAppConfig, BaseSettings, PydanticBaseSettingsSource
+from pydantic_settings import TomlConfigSettingsSource, PydanticBaseSettingsSource
+from pystonic.conf import BaseAppConfig, BaseSettings
 
 DEFAULT_CONF_PATH = Path.home().joinpath(".config", "ai-shell")
 DEFAULT_CONF_FILE = "ai-shell.toml"
@@ -40,6 +40,11 @@ class ProviderConfig(BaseModel):
     # e.g. {"enable_thinking": true}
     extra_body: Optional[Dict] = None
 
+    def set_enable_thinking(self, enable: bool):
+        if not self.extra_body:
+            self.extra_body = {}
+        self.extra_body["enable_thinking"] = enable
+
 
 class AppConfig(BaseAppConfig):
     ai_shell: AIShellConfig = AIShellConfig()
@@ -51,6 +56,7 @@ class AppConfig(BaseAppConfig):
             api_key="",
         )
     ]
+
     @classmethod
     def settings_customise_sources(
         cls,
@@ -67,6 +73,7 @@ class AppConfig(BaseAppConfig):
             file_secret_settings,
             TomlConfigSettingsSource(settings_cls),
         )
+
     def add_provider(self, provider: ProviderConfig):
         logger.info("add provider: {}", provider)
         self.providers.append(provider)

@@ -1,6 +1,6 @@
 import asyncio
 import atexit
-import importlib
+from importlib import metadata
 from datetime import datetime
 from typing import Optional
 
@@ -11,6 +11,7 @@ from agents import (
     set_default_openai_client,
     set_tracing_disabled,
 )
+from openai.types.responses.response_text_delta_event import ResponseTextDeltaEvent
 from loguru import logger
 from openai import AsyncOpenAI
 from pystonic.shell import Shell
@@ -19,7 +20,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
-
+from rich.text import Text
 from ai_shell.common import conf
 from ai_shell.core.session import SessionHisotry
 
@@ -101,7 +102,8 @@ class ShellAgent:
             if event.type != "raw_response_event" or not hasattr(event.data, "delta"):
                 continue
             logger.info("event: {}", event)
-            self.console.print(event.data.delta, end="")
+            if isinstance(event.data, ResponseTextDeltaEvent):
+                self.console.print(event.data.delta, end="")
         self.console.print()
         if self.response_id != result.last_response_id:
             self.response_id = result.last_response_id
@@ -140,8 +142,9 @@ class ShellAgent:
         self.console.print(
             Panel(
                 f"{self.system_info()}\n{self.provider_info()}",
-                title=f"AI-Shell {importlib.metadata.version('ai-shell')}",
-            )
+                title=f"AI-Shell {metadata.version('ai-shell')}",
+            ),
+            Text(f"Session: {self.session_store.session_id}"),
         )
 
         while True:

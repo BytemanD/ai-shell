@@ -77,11 +77,13 @@ def add(
             base_url=HttpUrl(base_url),
             api_key=api_key,
             timeout=timeout,
-            enable_thinking=enable_thinking,
+            extra_body={"enable_thinking": enable_thinking}
+            if enable_thinking
+            else None,
         )
     )
     if use:
-        CONF.use_provider = name
+        CONF.ai_shell.use_provider = name
     CONF.save()
     click.secho("add provider success")
 
@@ -114,7 +116,7 @@ def update(
         if timeout:
             provider.timeout = timeout
         if enable_thinking is not None:
-            provider.enable_thinking = enable_thinking
+            provider.set_enable_thinking(enable_thinking)
         CONF.save(exclude_defaults=False)
         break
     else:
