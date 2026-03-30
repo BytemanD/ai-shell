@@ -25,5 +25,4 @@ def app(verbose: int):
             min(verbose, max(LogLevel).value)
         ).name
 
-    app_conf.AppConfig.setup(init_settings=init_settings)
-    app_conf.CONF = app_conf.AppConfig.model_validate()
+    app_conf.CONF = app_conf.AppConfig.new(init_settings)

@@ -1,26 +1,28 @@
 import asyncio
 import atexit
-from importlib import metadata
 from datetime import datetime
+from importlib import metadata
 from typing import Optional
 
-import click
 from agents import (
     Agent,
     Runner,
     set_default_openai_client,
     set_tracing_disabled,
 )
-from openai.types.responses.response_text_delta_event import ResponseTextDeltaEvent
 from loguru import logger
 from openai import AsyncOpenAI
+from openai.types.responses.response_text_delta_event import ResponseTextDeltaEvent
+from pystonic.core import textutil
 from pystonic.shell import Shell
-from pystonic.utils import textutil
 from rich.console import Console
+from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.prompt import Confirm, Prompt
 from rich.rule import Rule
 from rich.text import Text
+
 from ai_shell.common import conf
 from ai_shell.core.session import SessionHisotry
 
@@ -89,21 +91,46 @@ class ShellAgent:
         return [x.id for x in (await self.openai.models.list()).data]
 
     async def _ask_with_stream(self, user_input: str):
-        result = Runner.run_streamed(
-            self.agent,
-            user_input,
-            session=self.session_store,
-            # NOTE: 使用了本地本地会话持久化后不能使用以下参数
-            # auto_previous_response_id=True,
-            # previous_response_id=self.response_id,
-        )
+        with self.console.status("正在思考...", speed=0.1):
+            result = Runner.run_streamed(
+                self.agent,
+                user_input,
+                session=self.session_store,
+                # NOTE: 使用了本地本地会话持久化后不能使用以下参数
+                # auto_previous_response_id=True,
+                # previous_response_id=self.response_id,
+            )
 
-        async for event in result.stream_events():
-            if event.type != "raw_response_event" or not hasattr(event.data, "delta"):
-                continue
-            logger.info("event: {}", event)
-            if isinstance(event.data, ResponseTextDeltaEvent):
-                self.console.print(event.data.delta, end="")
+        with Live(
+            console=self.console, refresh_per_second=1, auto_refresh=False
+        ) as live:
+            data = ""
+            async for event in result.stream_events():
+                if event.type != "raw_response_event" or not hasattr(
+                    event.data, "delta"
+                ):
+                    continue
+                logger.info("event: {}", event)
+                if not isinstance(event.data, ResponseTextDeltaEvent):
+                    continue
+                data += event.data.delta
+
+                if "警告:" in data:
+                    border_style = "red"
+                elif "无法识别" in data:
+                    border_style = "yellow"
+                else:
+                    border_style = "none"
+                live.update(
+                    Panel(
+                        Markdown(data),
+                        title="AI:",
+                        title_align="left",
+                        border_style=border_style,
+                    )
+                )
+                live.refresh()
+
         self.console.print()
         if self.response_id != result.last_response_id:
             self.response_id = result.last_response_id
@@ -118,7 +145,7 @@ class ShellAgent:
         answer = await self._ask_with_stream(user_input)
         logger.info("answer: {}", answer)
         if "无法识别" in answer:
-            self.console.print(answer, style="yellow")
+            logger.info("无法识别意图")
             return
 
         code_blocks = textutil.find_code_blocks_from_markdown(answer)
@@ -126,12 +153,8 @@ class ShellAgent:
         if not code_blocks:
             # 未检测到代码块
             return
-        if "警告:" in answer:
-            self.console.print(Panel(Markdown(answer), border_style="red"))
-        else:
-            self.console.print(Panel(Markdown(answer), border_style="green"))
 
-        if self.yes or click.confirm("是否执行?"):
+        if self.yes or Confirm.ask("是否执行?", default=False):
             self.console.print("开始执行...", style="yellow")
             self.console.print("~~~~~~~~~~~~~~~~~~~")
             for code_block in code_blocks:
@@ -149,12 +172,8 @@ class ShellAgent:
 
         while True:
             self.console.print(Rule(datetime.now().isoformat(sep=" "), style="cyan"))
-            user_input = click.prompt(
-                click.style(
-                    conf.CONF.ai_shell.input_prompt,
-                    fg="bright_white",
-                    bg="cyan",
-                )
+            user_input = Prompt.ask(
+                Text(conf.CONF.ai_shell.input_prompt, style="white on cyan")
             )
             if user_input in conf.CONF.ai_shell.exit_keys:
                 break
@@ -166,8 +185,9 @@ class ShellAgent:
     def delete_agent_session(self, session_id: str):
         return self.session_history.delete_agent_session(session_id)
 
-    def clearn_session(self, session_id: Optional[str]):
+    def clear_session(self, session_id: Optional[str]):
         session_store = self.session_history.get_session_store(
             session_id=session_id, last_session=True, raise_if_not_found=True
         )
         asyncio.run(session_store.clear_session())
+        return session_store.session_id

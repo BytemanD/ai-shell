@@ -9,7 +9,7 @@ from rich.panel import Panel
 
 from ai_shell.common.table import default_rich_table
 from ai_shell.core.ai import ShellAgent
-from ai_shell.core.session import AgentSession, SessionHisotry
+from ai_shell.core.session import AgentSession, SessionHisotry, SessionNotFound
 
 
 @click.group()
@@ -40,8 +40,12 @@ def remove_session(session_id: List[str]):
 def clear_session(session: str):
     """删除会话聊天记录"""
     shell_agent = ShellAgent()
-    session_store = shell_agent.clearn_session(session_id=session)
-    click.secho(f"clear session {session_store.session_id} messges success", fg="green")
+    try:
+        session_id = shell_agent.clear_session(session_id=session)
+    except SessionNotFound as e:
+        click.secho(f"session clear failed: {e}", fg="yellow")
+    else:
+        click.secho(f"clear session {session_id} messges success", fg="green")
 
 
 @session.command("messages")
