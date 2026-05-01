@@ -20,6 +20,7 @@ class AIShellConfig(BaseModel):
     exit_keys: List[str] = ["exit", "quit", "q"]
     use_provider: str = "alibaba"
     message_window: int = 50
+    stream: bool = True
 
 
 class ProviderConfig(BaseModel):

@@ -40,6 +40,13 @@ SYSTEM_PROMPT_NOTICE = """
 """
 
 
+def fix_message_roles(messages):
+    for msg in messages:
+        if msg.get("role") == "tool":
+            msg["role"] = "assistant"
+    return messages
+
+
 class ShellAgent:
     def __init__(
         self,
@@ -80,6 +87,7 @@ class ShellAgent:
             + SYSTEM_PROMPT_NOTICE.format(info=self.system_info()),
             model=self.model,
             tools=[tools.execute_command, tools.user_confirm],
+            # input_filter=fix_message_roles,
         )
         atexit.register(self.close)
 
@@ -98,17 +106,28 @@ class ShellAgent:
     async def list_model(self):
         return [x.id for x in (await self.openai.models.list()).data]
 
-    async def _ask_with_stream(self, user_input: str):
+    async def _call_llm(self, user_input: str):
         logger.debug("输入: {}", user_input)
-        with self.console.status("正在思考...", speed=0.1):
-            result = Runner.run_streamed(
-                self.agent,
-                user_input,
-                session=self.session_store,
-                # NOTE: 使用了本地本地会话持久化后不能使用以下参数
-                # auto_previous_response_id=True,
-                # previous_response_id=self.response_id,
-            )
+        if not conf.CONF.ai_shell.stream:
+            self.agent.tools.remove(tools.user_confirm)
+            with self.console.status("正在思考...", speed=0.1):
+                result = await Runner.run(
+                    self.agent,
+                    user_input,
+                    session=self.session_store,
+                    # NOTE: 使用了本地本地会话持久化后不能使用以下参数
+                    # auto_previous_response_id=True,
+                    # previous_response_id=self.response_id,
+                )
+            return result.new_items[-1].output
+        result = Runner.run_streamed(
+            self.agent,
+            user_input,
+            session=self.session_store,
+            # NOTE: 使用了本地本地会话持久化后不能使用以下参数
+            # auto_previous_response_id=True,
+            # previous_response_id=self.response_id,
+        )
         async for event in result.stream_events():
             if isinstance(event, stream_events.AgentUpdatedStreamEvent):
                 self.console.print(
@@ -134,8 +153,11 @@ class ShellAgent:
                         "received response failed event: {}", event.data.response.error
                     )
                     self.console.print(
-                        Panel(event.data.response.error.model_dump_json(),
-                              title="收到错误事件", border_style="red"),
+                        Panel(
+                            event.data.response.error.model_dump_json(),
+                            title="收到错误事件",
+                            border_style="red",
+                        ),
                     )
                 else:
                     pass
@@ -155,7 +177,9 @@ class ShellAgent:
             elif event.name == "tool_output":
                 # 可选：显示工具输出
                 self.console.print(
-                    Panel(str(event.item.output), title="工具输出", border_style="green")
+                    Panel(
+                        str(event.item.output), title="工具输出", border_style="green"
+                    )
                 )
                 continue
             elif isinstance(event, stream_events.RunItemStreamEvent):
@@ -221,9 +245,9 @@ class ShellAgent:
         if user_input in self.actions:
             self.actions[user_input](self)
             return
-        answer = await self._ask_with_stream(user_input)
+        answer = await self._call_llm(user_input)
         if answer:
-            self.console.print(Panel(answer, style="magenta", border_style="magenta"))
+            self.console.print(Panel(answer, border_style="cyan"))
         # logger.info("answer: {}", answer)
         # if "无法识别" in answer:
         #     logger.info("无法识别意图")
