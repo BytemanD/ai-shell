@@ -99,6 +99,7 @@ class ShellAgent:
         return [x.id for x in (await self.openai.models.list()).data]
 
     async def _ask_with_stream(self, user_input: str):
+        logger.debug("输入: {}", user_input)
         with self.console.status("正在思考...", speed=0.1):
             result = Runner.run_streamed(
                 self.agent,
@@ -110,39 +111,61 @@ class ShellAgent:
             )
         async for event in result.stream_events():
             if isinstance(event, stream_events.AgentUpdatedStreamEvent):
-                self.console.print(f"--> 切换Agent: {event.new_agent.name}", style='grey0')
+                self.console.print(
+                    f"[切换Agent]: {event.new_agent.name}", style="grey0"
+                )
                 continue
                 # 通知用户 Agent 正在切换
                 # print(f"   专长：{event.new_agent.instructions[:50]}...")
             elif isinstance(event, stream_events.RawResponsesStreamEvent):
                 # if isinstance(event, types.ResponseCreatedEvent):
                 # if isinstance(event.data, )
-                if hasattr(event.data, 'delta'):
+                if hasattr(event.data, "delta"):
                     # print(event.data.delta, flush=True, end='')
                     pass
-                elif isinstance(event.data, (ResponseInProgressEvent, ResponseCreatedEvent)):
-                    self.console.print(f'[状态] {event.data.response.status}', style='grey0')
+                elif isinstance(
+                    event.data, (ResponseInProgressEvent, ResponseCreatedEvent)
+                ):
+                    self.console.print(
+                        f"[状态] {event.data.response.status}", style="grey0"
+                    )
                 elif isinstance(event.data, ResponseFailedEvent):
-                    self.console.print(event.data, style='red')
+                    logger.debug(
+                        "received response failed event: {}", event.data.response.error
+                    )
+                    self.console.print(
+                        Panel(event.data.response.error.model_dump_json(),
+                              title="收到错误事件", border_style="red"),
+                    )
                 else:
                     pass
-            # elif event.type == "raw_response_event" and isinstance(
-            #     event.data, ResponseTextDeltaEvent
-            # ):
-            #     print(event.data.delta, end="", flush=True)
+                # elif event.type == "raw_response_event" and isinstance(
+                #     event.data, ResponseTextDeltaEvent
+                # ):
+                #     print(event.data.delta, end="", flush=True)
                 continue
             elif event.name == "tool_called":
                 # 向用户展示工具调用状态
                 # breakpoint()
-                self.console.print(f"[调用工具] {event.item.raw_item.name}, 参数： {event.item.raw_item.arguments}",
-                                   style='grey0')
+                self.console.print(
+                    f"[选择工具] {event.item.raw_item.name}, 参数： {event.item.raw_item.arguments}",
+                    style="grey0",
+                )
                 continue
             elif event.name == "tool_output":
                 # 可选：显示工具输出
-                self.console.print(Panel(event.item.output, title="工具输出"))
+                self.console.print(
+                    Panel(str(event.item.output), title="工具输出", border_style="green")
+                )
                 continue
             elif isinstance(event, stream_events.RunItemStreamEvent):
-                self.console.print(Panel(Markdown(event.item.raw_item.content[0].text)))
+                self.console.print(
+                    Panel(
+                        Markdown(event.item.raw_item.content[0].text),
+                        title="AI",
+                        border_style="cyan",
+                    )
+                )
         # breakpoint()
         return ""
 
@@ -199,7 +222,8 @@ class ShellAgent:
             self.actions[user_input](self)
             return
         answer = await self._ask_with_stream(user_input)
-        self.console.print(Panel(answer, style="magenta", border_style="magenta"))
+        if answer:
+            self.console.print(Panel(answer, style="magenta", border_style="magenta"))
         # logger.info("answer: {}", answer)
         # if "无法识别" in answer:
         #     logger.info("无法识别意图")

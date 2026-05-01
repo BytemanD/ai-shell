@@ -88,6 +88,7 @@ class AppConfig(BaseAppConfig):
             filename=self.log.file,
             level="DEBUG" if self.log.level == "TRACE" else self.log.level,
             format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
+            encoding="utf-8",
         )
 
 
