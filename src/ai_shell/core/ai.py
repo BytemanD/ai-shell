@@ -9,21 +9,27 @@ from agents import (
     Runner,
     set_default_openai_client,
     set_tracing_disabled,
+    stream_events,
 )
 from loguru import logger
 from openai import AsyncOpenAI
-from openai.types.responses.response_text_delta_event import ResponseTextDeltaEvent
-from pystonic.core import textutil
+from openai.types.responses import (
+    ResponseCreatedEvent,
+    ResponseFailedEvent,
+    ResponseInProgressEvent,
+)
+
+# from openai.types.
 from pystonic.shell import Shell
 from rich.console import Console
-from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
-from rich.prompt import Confirm, Prompt
+from rich.prompt import Prompt
 from rich.rule import Rule
 from rich.text import Text
 
 from ai_shell.common import conf
+from ai_shell.core import tools
 from ai_shell.core.session import SessionHisotry
 
 SYSTEM_PROMPT_NOTICE = """
@@ -69,9 +75,11 @@ class ShellAgent:
 
         self.agent = Agent(
             name="AI-Shell",
+            # instructions="你是一个用的助手， 这是一个windows 系统。",
             instructions=conf.CONF.ai_shell.system_prompt.strip()
             + SYSTEM_PROMPT_NOTICE.format(info=self.system_info()),
             model=self.model,
+            tools=[tools.execute_command, tools.user_confirm],
         )
         atexit.register(self.close)
 
@@ -100,66 +108,115 @@ class ShellAgent:
                 # auto_previous_response_id=True,
                 # previous_response_id=self.response_id,
             )
-
-        with Live(
-            console=self.console, refresh_per_second=1, auto_refresh=False
-        ) as live:
-            data = ""
-            async for event in result.stream_events():
-                if event.type != "raw_response_event" or not hasattr(
-                    event.data, "delta"
-                ):
-                    continue
-                logger.info("event: {}", event)
-                if not isinstance(event.data, ResponseTextDeltaEvent):
-                    continue
-                data += event.data.delta
-
-                if "警告:" in data:
-                    border_style = "red"
-                elif "无法识别" in data:
-                    border_style = "yellow"
+        async for event in result.stream_events():
+            if isinstance(event, stream_events.AgentUpdatedStreamEvent):
+                self.console.print(f"--> 切换Agent: {event.new_agent.name}", style='grey0')
+                continue
+                # 通知用户 Agent 正在切换
+                # print(f"   专长：{event.new_agent.instructions[:50]}...")
+            elif isinstance(event, stream_events.RawResponsesStreamEvent):
+                # if isinstance(event, types.ResponseCreatedEvent):
+                # if isinstance(event.data, )
+                if hasattr(event.data, 'delta'):
+                    # print(event.data.delta, flush=True, end='')
+                    pass
+                elif isinstance(event.data, (ResponseInProgressEvent, ResponseCreatedEvent)):
+                    self.console.print(f'[状态] {event.data.response.status}', style='grey0')
+                elif isinstance(event.data, ResponseFailedEvent):
+                    self.console.print(event.data, style='red')
                 else:
-                    border_style = "none"
-                live.update(
-                    Panel(
-                        Markdown(data),
-                        title="AI:",
-                        title_align="left",
-                        border_style=border_style,
-                    )
-                )
-                live.refresh()
+                    pass
+            # elif event.type == "raw_response_event" and isinstance(
+            #     event.data, ResponseTextDeltaEvent
+            # ):
+            #     print(event.data.delta, end="", flush=True)
+                continue
+            elif event.name == "tool_called":
+                # 向用户展示工具调用状态
+                # breakpoint()
+                self.console.print(f"[调用工具] {event.item.raw_item.name}, 参数： {event.item.raw_item.arguments}",
+                                   style='grey0')
+                continue
+            elif event.name == "tool_output":
+                # 可选：显示工具输出
+                self.console.print(Panel(event.item.output, title="工具输出"))
+                continue
+            elif isinstance(event, stream_events.RunItemStreamEvent):
+                self.console.print(Panel(Markdown(event.item.raw_item.content[0].text)))
+        # breakpoint()
+        return ""
 
-        self.console.print()
-        if self.response_id != result.last_response_id:
-            self.response_id = result.last_response_id
-            logger.info("update response: {}", self.response_id)
+        # with Live(
+        #     console=self.console, refresh_per_second=1, auto_refresh=False
+        # ) as live:
+        #     data = ""
+        #     async for event in result.stream_events():
+        #         logger.info("event: {}", event)
+        #         if isinstance(event, AgentUpdatedStreamEvent):
+        #             continue
+        #         if (
+        #             isinstance(event, RunItemStreamEvent)
+        #             and event.item.type == "tool_call_output_item"
+        #         ):
+        #             print("工具输出")
+        #             self.console.print(Panel(event.item.output))
+        #             continue
+        #         # if isinstance(event.data, ResponseFailedEvent)
+        #         if event.type != "raw_response_event" or not hasattr(
+        #             event.data, "delta"
+        #         ):
+        #             continue
+        #         if not isinstance(event.data, ResponseTextDeltaEvent):
+        #             continue
+        #         data += event.data.delta
 
-        return result.final_output
+        #         if "警告:" in data:
+        #             border_style = "red"
+        #         elif "无法识别" in data:
+        #             border_style = "yellow"
+        #         else:
+        #             border_style = "none"
+        #         live.update(
+        #             Panel(
+        #                 Markdown(data),
+        #                 title="AI:",
+        #                 title_align="left",
+        #                 border_style=border_style,
+        #             )
+        #         )
+        #         live.refresh()
+
+        # self.console.print()
+        # if self.response_id != result.last_response_id:
+        #     self.response_id = result.last_response_id
+        #     logger.info("update response: {}", self.response_id)
+
+        # breakpoint()
+        # return result.output
 
     async def run(self, user_input: str):
         if user_input in self.actions:
             self.actions[user_input](self)
             return
         answer = await self._ask_with_stream(user_input)
-        logger.info("answer: {}", answer)
-        if "无法识别" in answer:
-            logger.info("无法识别意图")
-            return
+        self.console.print(Panel(answer, style="magenta", border_style="magenta"))
+        # logger.info("answer: {}", answer)
+        # if "无法识别" in answer:
+        #     logger.info("无法识别意图")
+        #     return
 
-        code_blocks = textutil.find_code_blocks_from_markdown(answer)
-        logger.info("matched code blocks: {}", code_blocks)
-        if not code_blocks:
-            # 未检测到代码块
-            return
+        # code_blocks = textutil.find_code_blocks_from_markdown(answer)
+        # logger.info("matched code blocks: {}", code_blocks)
+        # if not code_blocks:
+        #     # 未检测到代码块
+        #     return
 
-        if self.yes or Confirm.ask("是否执行?", default=False):
-            self.console.print("开始执行...", style="yellow")
-            self.console.print("~~~~~~~~~~~~~~~~~~~")
-            for code_block in code_blocks:
-                self.shell.execute(code_block)
-            self.console.print("~~~~~~~~~~~~~~~~~~~")
+        # if self.yes or Confirm.ask("是否执行?", default=False):
+        #     self.console.print("开始执行...", style="yellow")
+        #     self.console.print("~~~~~~~~~~~~~~~~~~~")
+        #     for code_block in code_blocks:
+        #         self.shell.execute(code_block)
+        #     self.console.print("~~~~~~~~~~~~~~~~~~~")
 
     async def chat(self):
         self.console.print(
@@ -172,18 +229,22 @@ class ShellAgent:
 
         while True:
             self.console.print(Rule(datetime.now().isoformat(sep=" "), style="cyan"))
-            user_input = Prompt.ask(
-                Text(conf.CONF.ai_shell.input_prompt, style="white on cyan")
-            )
+            while True:
+                user_input = Prompt.ask(
+                    Text(conf.CONF.ai_shell.input_prompt, style="white on cyan")
+                )
+                if user_input:
+                    break
             if user_input in conf.CONF.ai_shell.exit_keys:
                 break
             await self.run(user_input)
 
     def get_agent_sessions(self):
+        """获取会话列表"""
         return self.session_history.get_agent_sessions()
 
-    def delete_agent_session(self, session_id: str):
-        return self.session_history.delete_agent_session(session_id)
+    async def delete_agent_session(self, session_id: str):
+        await self.session_history.delete_agent_session(session_id)
 
     def clear_session(self, session_id: Optional[str]):
         session_store = self.session_history.get_session_store(

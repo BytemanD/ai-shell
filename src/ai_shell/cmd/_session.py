@@ -3,7 +3,6 @@ from typing import List, Optional
 
 import click
 from loguru import logger
-from rich.align import Align
 from rich.console import Console
 from rich.panel import Panel
 
@@ -25,14 +24,27 @@ def list_session():
 
 
 @session.command("remove")
-@click.argument("session_id", nargs=-1, required=True)
-def remove_session(session_id: List[str]):
+@click.argument("session_id", nargs=-1)
+@click.option("--all", is_flag=True, help="删除所有会话")
+def remove_session(session_id: List[str], all=False):
     """删除会话"""
-    shell_agent = ShellAgent()
+    if not all and not session_id:
+        raise click.BadParameter("请指定会话Id 或 --all")
+    if all and session_id:
+        raise click.BadParameter("请不要同时指定会话Id 和 --all")
 
-    for item in session_id:
-        shell_agent.delete_agent_session(item)
-        click.secho(f"removed session {item}", fg="green")
+    shell_agent = ShellAgent()
+    if all:
+        session_id_list = shell_agent.get_agent_sessions()
+    else:
+        session_id_list = session_id
+
+    if not session_id_list:
+        click.secho("无 session", fg="yellow")
+        return
+    for item in session_id_list:
+        asyncio.run(shell_agent.delete_agent_session(item.session_id))
+        click.secho(f"removed session {item.session_id}", fg="green")
 
 
 @session.command("clear")
@@ -52,17 +64,14 @@ def clear_session(session: str):
 @click.option("-c", "--count", is_flag=True, help="只输出数量")
 @click.option("-s", "--session", type=str, help="session id")
 def list_messages(count: True, session: Optional[str]):
-    """显示会话聊天记录"""
+    """显示会话聊天记录(默认上一次)"""
     session_history = SessionHisotry()
     try:
-        if session:
-            session_store = session_history.get_session_store(
-                session_id=session, raise_if_not_found=True
-            )
-        else:
-            session_store = session_history.get_session_store(
-                last_session=True, raise_if_not_found=True
-            )
+        session_store = session_history.get_session_store(
+            session_id=session,
+            last_session=True if not session else False,
+            raise_if_not_found=True,
+        )
     except Exception as e:
         logger.exception(e)
         raise click.ClickException(str(e))
@@ -77,20 +86,23 @@ def list_messages(count: True, session: Optional[str]):
 
     for item in items:
         role: str = item.get("role")
-        content: list = item.get("content")
         if role == "system":
             continue
-        if role == "assistant":
-            console.print(
-                Panel(
-                    content[0].get("text") if content else "",
-                    expand=False,
-                    border_style="magenta",
-                )
-            )
-        elif role == "user":
-            console.print(
-                Align.right(
-                    Panel(item.get("content", ""), expand=False, border_style="green")
-                )
-            )
+        # breakpoint()
+        if role:
+            title = role
+            border_style="magenta"
+            content = item.get("content")
+        elif item.get("type"):
+            title = item.get("type")
+            if title == "function_call":
+                content = f"Call `{item.get('name')}` with arguments: {item.get('arguments')}"
+                border_style="cyan"
+            elif title == "function_call_output":
+                content = item.get("output")
+                border_style="green"
+            else:
+                content = str(item)
+                border_style = "grey0"
+
+        console.print(Panel(content, title=title, title_align='left', border_style=border_style))

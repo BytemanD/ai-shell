@@ -31,15 +31,11 @@ class SessionHisotry:
     def __init__(self):
         conf_file = conf.CONF.get_conf_file()
         self.conf_path = conf_file.parent if conf_file else conf.DEFAULT_CONF_PATH
-        self.history_file = self.conf_path.joinpath("session_history.json")
         self.store_file = self.conf_path.joinpath("conversation.db")
         self.load()
 
     def load(self):
         self.conf_path.mkdir(parents=True, exist_ok=True)
-        logger.debug("loading session history from %s", self.history_file)
-        if not self.history_file.exists():
-            return
 
     def get_session_store(
         self,

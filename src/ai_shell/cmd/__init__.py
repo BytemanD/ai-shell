@@ -25,4 +25,5 @@ def app(verbose: int):
             min(verbose, max(LogLevel).value)
         ).name
 
-    app_conf.CONF = app_conf.AppConfig.new(init_settings)
+    from pystonic.log import setup_logger
+    setup_logger(app_conf.CONF.log, versbose=0, remove=True)

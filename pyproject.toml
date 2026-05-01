@@ -24,7 +24,7 @@ dependencies = [
     "click>=8.3.1",
     "openai>=2.29.0",
     "openai-agents>=0.13.0",
-    "pystonic>=2.0.0",
+    "pystonic>=2.0.1",
     "rich>=14.3.3",
 ]
 

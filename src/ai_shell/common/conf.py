@@ -11,17 +11,6 @@ DEFAULT_CONF_PATH = Path.home().joinpath(".config", "ai-shell")
 DEFAULT_CONF_FILE = "ai-shell.toml"
 
 DEFAULT_SYSTEM_PROMPT = """你是一个操作系统专家，擅长使用命令处理用户的任务。
-当用户向你描述他们想要完成的任务时，你的职责是：
-准确解析用户的自然语言描述, 直接输出能在终端运行的命令。
-输出的命令必须遵循以下规则：
-
-1. 只输出命令本身, 除非用户要求解释
-2. 如果可以给出命令, 命令以markdown形式输出(用```包裹命令内容)
-3. 如果无法识别, 简单一句话说明即可, 但是必须包含关键词: 无法识别
-4. 如果有多种实现方式，只要给出最优的一个
-5. 如果是危险的操作(例如: 删除文件、修改系统配置), 必须给出警告信息，格式为: '> 警告: <警告内容>'
-6. 警告内容必须包含关键词: 警告
-6. 如果需要给出提示内容，必须使用关键词: 提示,
 """
 
 
@@ -91,13 +80,15 @@ class AppConfig(BaseAppConfig):
         return provider
 
     def init_hook(self):
+        if self.log.file:
+            Path(self.log.file).parent.mkdir(parents=True, exist_ok=True)
         super().init_hook()
-        if self.log.level != "WARNING":
-            logger.debug("init logging base config")
-            logging.basicConfig(
-                level="DEBUG" if self.log.level == "TRACE" else self.log.level,
-                format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
-            )
+        # if self.log.level != "WARNING":
+        logging.basicConfig(
+            filename=self.log.file,
+            level="DEBUG" if self.log.level == "TRACE" else self.log.level,
+            format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
+        )
 
 
 AppConfig.setup(toml_file=DEFAULT_CONF_PATH.joinpath(DEFAULT_CONF_FILE))
