@@ -1,5 +1,6 @@
 import asyncio
 import atexit
+import textwrap
 from datetime import datetime
 from importlib import metadata
 from typing import Optional
@@ -11,6 +12,7 @@ from agents import (
     set_tracing_disabled,
     stream_events,
 )
+from agents.exceptions import AgentsException
 from loguru import logger
 from openai import AsyncOpenAI
 from openai.types.responses import (
@@ -29,8 +31,10 @@ from rich.rule import Rule
 from rich.text import Text
 
 from ai_shell.common import conf
-from ai_shell.core import tools
 from ai_shell.core.session import SessionHisotry
+
+# from ai_shell.core import tools
+from ai_shell.core.tools import common, shell, sqlite
 
 SYSTEM_PROMPT_NOTICE = """
 当前系统：
@@ -77,16 +81,25 @@ class ShellAgent:
         )
         logger.info("session id: {}", self.session_store.session_id)
 
-        set_default_openai_client(self.openai)
+        set_default_openai_client(self.openai, use_for_tracing=False)
         set_tracing_disabled(True)
 
+        instructions = (
+            conf.CONF.ai_shell.system_prompt.strip()
+            + SYSTEM_PROMPT_NOTICE.format(info=self.system_info())
+        )
+        logger.debug("instructions: {}", instructions)
         self.agent = Agent(
             name="AI-Shell",
             # instructions="你是一个用的助手， 这是一个windows 系统。",
-            instructions=conf.CONF.ai_shell.system_prompt.strip()
-            + SYSTEM_PROMPT_NOTICE.format(info=self.system_info()),
+            instructions=instructions,
             model=self.model,
-            tools=[tools.execute_command, tools.user_confirm],
+            tools=[
+                common.getcwd,
+                shell.execute_command,
+                sqlite.connect_db,
+                sqlite.execute_sql,
+            ],
             # input_filter=fix_message_roles,
         )
         atexit.register(self.close)
@@ -109,8 +122,7 @@ class ShellAgent:
     async def _call_llm(self, user_input: str):
         logger.debug("输入: {}", user_input)
         if not conf.CONF.ai_shell.stream:
-            self.agent.tools.remove(tools.user_confirm)
-            with self.console.status("正在思考...", speed=0.1):
+            with self.console.status("正在思考...", speed=0.5):
                 result = await Runner.run(
                     self.agent,
                     user_input,
@@ -135,10 +147,7 @@ class ShellAgent:
                 )
                 continue
                 # 通知用户 Agent 正在切换
-                # print(f"   专长：{event.new_agent.instructions[:50]}...")
             elif isinstance(event, stream_events.RawResponsesStreamEvent):
-                # if isinstance(event, types.ResponseCreatedEvent):
-                # if isinstance(event.data, )
                 if hasattr(event.data, "delta"):
                     # print(event.data.delta, flush=True, end='')
                     pass
@@ -152,19 +161,16 @@ class ShellAgent:
                     logger.debug(
                         "received response failed event: {}", event.data.response.error
                     )
-                    self.console.print(
-                        Panel(
-                            event.data.response.error.model_dump_json(),
-                            title="收到错误事件",
-                            border_style="red",
-                        ),
-                    )
+                    if conf.CONF.ai_shell.show_failed_event:
+                        self.console.print(
+                            Panel(
+                                event.data.response.error.model_dump_json(),
+                                title="收到错误事件",
+                                border_style="red",
+                            ),
+                        )
                 else:
                     pass
-                # elif event.type == "raw_response_event" and isinstance(
-                #     event.data, ResponseTextDeltaEvent
-                # ):
-                #     print(event.data.delta, end="", flush=True)
                 continue
             elif event.name == "tool_called":
                 # 向用户展示工具调用状态
@@ -175,21 +181,28 @@ class ShellAgent:
                 )
                 continue
             elif event.name == "tool_output":
-                # 可选：显示工具输出
                 self.console.print(
                     Panel(
-                        str(event.item.output), title="工具输出", border_style="green"
+                        str(event.item.output), title="工具输出", border_style="grey0"
                     )
                 )
                 continue
             elif isinstance(event, stream_events.RunItemStreamEvent):
-                self.console.print(
-                    Panel(
-                        Markdown(event.item.raw_item.content[0].text),
-                        title="AI",
-                        border_style="cyan",
-                    )
-                )
+                logger.debug("RunItemStreamEvent raw_item: {}", event.item.raw_item)
+                if event.item.raw_item.content:
+                    for content in event.item.raw_item.content:
+                        self.console.print(
+                            Panel(
+                                Markdown(content.text), title="AI", border_style="cyan"
+                            )
+                        )
+                elif event.item.raw_item.summary:
+                    for sumary in event.item.raw_item.summary:
+                        self.console.print(textwrap.indent(sumary.text, '> '), style="grey0")
+                continue
+            else:
+                logger.debug("other event: {}", event)
+
         # breakpoint()
         return ""
 
@@ -245,26 +258,13 @@ class ShellAgent:
         if user_input in self.actions:
             self.actions[user_input](self)
             return
-        answer = await self._call_llm(user_input)
+        answer = ""
+        try:
+            answer = await self._call_llm(user_input)
+        except AgentsException as e:
+            logger.error("模型调用异常: {}", e)
         if answer:
             self.console.print(Panel(answer, border_style="cyan"))
-        # logger.info("answer: {}", answer)
-        # if "无法识别" in answer:
-        #     logger.info("无法识别意图")
-        #     return
-
-        # code_blocks = textutil.find_code_blocks_from_markdown(answer)
-        # logger.info("matched code blocks: {}", code_blocks)
-        # if not code_blocks:
-        #     # 未检测到代码块
-        #     return
-
-        # if self.yes or Confirm.ask("是否执行?", default=False):
-        #     self.console.print("开始执行...", style="yellow")
-        #     self.console.print("~~~~~~~~~~~~~~~~~~~")
-        #     for code_block in code_blocks:
-        #         self.shell.execute(code_block)
-        #     self.console.print("~~~~~~~~~~~~~~~~~~~")
 
     async def chat(self):
         self.console.print(

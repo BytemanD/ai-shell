@@ -11,6 +11,9 @@ DEFAULT_CONF_PATH = Path.home().joinpath(".config", "ai-shell")
 DEFAULT_CONF_FILE = "ai-shell.toml"
 
 DEFAULT_SYSTEM_PROMPT = """你是一个操作系统专家，擅长使用命令处理用户的任务。
+
+要求:
+1. 对话使用中文
 """
 
 
@@ -21,6 +24,7 @@ class AIShellConfig(BaseModel):
     use_provider: str = "alibaba"
     message_window: int = 50
     stream: bool = True
+    show_failed_event: bool = True
 
 
 class ProviderConfig(BaseModel):
