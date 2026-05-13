@@ -96,11 +96,12 @@ class ShellAgent:
             model=self.model,
             tools=[
                 common.getcwd,
+                common.read_file,
+                common.write_file,
                 shell.execute_command,
                 sqlite.connect_db,
                 sqlite.execute_sql,
             ],
-            # input_filter=fix_message_roles,
         )
         atexit.register(self.close)
 
