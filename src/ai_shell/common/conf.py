@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -90,18 +89,6 @@ class AppConfig(BaseAppConfig):
         if not provider:
             raise ValueError(f"Provider '{provider_name}' not found in configuration")
         return provider
-
-    def init_hook(self):
-        if self.log.file:
-            Path(self.log.file).parent.mkdir(parents=True, exist_ok=True)
-        super().init_hook()
-        # if self.log.level != "WARNING":
-        logging.basicConfig(
-            filename=self.log.file,
-            level="DEBUG" if self.log.level == "TRACE" else self.log.level,
-            format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
-            encoding="utf-8",
-        )
 
 
 AppConfig.setup(toml_file=DEFAULT_CONF_PATH.joinpath(DEFAULT_CONF_FILE))

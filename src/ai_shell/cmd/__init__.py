@@ -1,8 +1,9 @@
 from enum import Enum, auto
 
 import click
+from pystonic.log import setup_logger
 
-import ai_shell.common.conf as app_conf
+from ai_shell.common.conf import CONF
 
 
 class LogLevel(int, Enum):
@@ -19,11 +20,4 @@ class LogLevel(int, Enum):
 def app(verbose: int):
     """AI-SHELL: 一个智能终端工具"""
 
-    init_settings = {}
-    if verbose:
-        init_settings.setdefault("log", {})["level"] = LogLevel(
-            min(verbose, max(LogLevel).value)
-        ).name
-
-    from pystonic.log import setup_logger
-    setup_logger(app_conf.CONF.log, versbose=0, remove=True)
+    setup_logger(CONF.log, versbose=verbose, remove=True)
