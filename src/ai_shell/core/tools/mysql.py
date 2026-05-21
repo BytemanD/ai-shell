@@ -1,39 +1,52 @@
-import sqlite3
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
+import pymysql
 from agents import function_tool
 
-# 全局数据库连接（在 Agent 对话期间保持）
 _global_conn = None
 
 
 @function_tool
-def connect_db(db_path: str = ":memory:") -> str:
+def connect_db(
+    user: str = "root",
+    password: Optional[str] = None,
+    host: str = "localhost",
+    port: int = 3306,
+    database: Optional[str]=None,
+    charset: str = "utf8mb4",
+    autocommit: bool=True,
+) -> str:
     """
-    建立 SQLite 数据库连接，并保存为全局连接（供后续 execute_sql 使用）。
+    建立 Mysql 数据库连接，并保存为全局连接（供后续 execute_sql 使用）。
 
     Args:
-        db_path: 数据库文件路径，默认为内存数据库（:memory:）
+        user: 数据库用户名
+        password: 密码
+        host: 数据库主机地址
+        port: 数据库端口号
+        database: 数据库名称
+        charset: 编码
+        autocommit: 是否自动提交
 
     Returns:
-        状态信息，例如 "Connected to database: test.db"
+        状态信息，例如 "Connected to database: DATABASE(host)"
     """
     global _global_conn
-    if _global_conn:
-        _global_conn.close()
-    _global_conn = sqlite3.connect(db_path)
-    _global_conn.row_factory = sqlite3.Row
-    return f"Connected to database: {db_path}"
 
+    _global_conn = pymysql.connect(
+        database=database,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+        charset=charset,
+        autocommit=autocommit,
+    )
 
 @function_tool
-def execute_sql(
-    sql: str, parameters: Tuple[Any, ...] = ()
-) -> Dict[str, Any]:
-    """
-    执行任意 SQL 语句（SELECT / INSERT / UPDATE / DELETE / CREATE TABLE 等）。
-    自动提交事务，如果尚未连接则自动连接内存数据库。
-
+def execute_sql(sql: str, parameters: Tuple[Any, ...] = ()) -> Dict[str, Any]:
+    """执行Mysql SQL 语句
+    
     Args:
         sql: SQL 语句，使用 ? 或 :name 占位符防止注入
         parameters: 可选参数，与占位符匹配
@@ -48,11 +61,12 @@ def execute_sql(
         result = execute_sql("SELECT * FROM users")  # 得到查询结果
     """
     global _global_conn
+
     if _global_conn is None:
-        # 未调用 connect 时自动连接内存数据库
-        connect_db()
+        raise Exception("数据库未连接")
 
     cursor = _global_conn.cursor()
+
     try:
         cursor.execute(sql, parameters or ())
 
@@ -60,7 +74,9 @@ def execute_sql(
         if sql.strip().upper().startswith("SELECT"):
             return {'rows': [dict(x) for x in cursor.fetchall()]}
         else:
-            _global_conn.commit()
+            if not _global_conn.autocommit_mode:
+                _global_conn.commit()
+
             last_id = cursor.lastrowid
             return {
                 "affected_rows": cursor.rowcount,

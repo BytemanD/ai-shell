@@ -34,7 +34,7 @@ from ai_shell.common import conf
 from ai_shell.core.session import SessionHisotry
 
 # from ai_shell.core import tools
-from ai_shell.core.tools import common, shell, sqlite
+from ai_shell.core.tools import common, mysql, shell, sqlite
 
 SYSTEM_PROMPT_NOTICE = """
 当前系统：
@@ -91,7 +91,6 @@ class ShellAgent:
         logger.debug("instructions: {}", instructions)
         self.agent = Agent(
             name="AI-Shell",
-            # instructions="你是一个用的助手， 这是一个windows 系统。",
             instructions=instructions,
             model=self.model,
             tools=[
@@ -101,6 +100,8 @@ class ShellAgent:
                 shell.execute_command,
                 sqlite.connect_db,
                 sqlite.execute_sql,
+                mysql.connect_db,
+                mysql.execute_sql,
             ],
         )
         atexit.register(self.close)
@@ -128,6 +129,7 @@ class ShellAgent:
                     self.agent,
                     user_input,
                     session=self.session_store,
+                    max_turns=conf.CONF.agent.max_turns,
                     # NOTE: 使用了本地本地会话持久化后不能使用以下参数
                     # auto_previous_response_id=True,
                     # previous_response_id=self.response_id,
@@ -137,6 +139,7 @@ class ShellAgent:
             self.agent,
             user_input,
             session=self.session_store,
+            max_turns=conf.CONF.agent.max_turns,
             # NOTE: 使用了本地本地会话持久化后不能使用以下参数
             # auto_previous_response_id=True,
             # previous_response_id=self.response_id,
@@ -175,18 +178,18 @@ class ShellAgent:
                 continue
             elif event.name == "tool_called":
                 # 向用户展示工具调用状态
-                # breakpoint()
                 self.console.print(
                     f"[选择工具] {event.item.raw_item.name}, 参数： {event.item.raw_item.arguments}",
                     style="grey0",
                 )
+                logger.info(
+                    "选择工具: {}, 参数: {}",
+                    event.item.raw_item.name,
+                    event.item.raw_item.arguments,
+                )
                 continue
             elif event.name == "tool_output":
-                self.console.print(
-                    Panel(
-                        str(event.item.output), title="工具输出", border_style="grey0"
-                    )
-                )
+                logger.info("工具输出: {}", event.item.output)
                 continue
             elif isinstance(event, stream_events.RunItemStreamEvent):
                 logger.debug("RunItemStreamEvent raw_item: {}", event.item.raw_item)
@@ -199,7 +202,9 @@ class ShellAgent:
                         )
                 elif event.item.raw_item.summary:
                     for sumary in event.item.raw_item.summary:
-                        self.console.print(textwrap.indent(sumary.text, '> '), style="grey0")
+                        self.console.print(
+                            textwrap.indent(sumary.text, "> "), style="grey0"
+                        )
                 continue
             else:
                 logger.debug("other event: {}", event)
@@ -264,6 +269,7 @@ class ShellAgent:
             answer = await self._call_llm(user_input)
         except AgentsException as e:
             logger.error("模型调用异常: {}", e)
+            raise
         if answer:
             self.console.print(Panel(answer, border_style="cyan"))
 
