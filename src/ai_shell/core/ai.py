@@ -11,6 +11,7 @@ from agents import (
     set_default_openai_client,
     set_tracing_disabled,
     stream_events,
+    set_default_openai_api,
 )
 from agents.exceptions import AgentsException
 from loguru import logger
@@ -82,6 +83,8 @@ class ShellAgent:
         logger.info("session id: {}", self.session_store.session_id)
 
         set_default_openai_client(self.openai, use_for_tracing=False)
+        if conf.CONF.agent.openai_api:
+            set_default_openai_api(conf.CONF.agent.openai_api)
         set_tracing_disabled(True)
 
         instructions = (
@@ -134,7 +137,7 @@ class ShellAgent:
                     # auto_previous_response_id=True,
                     # previous_response_id=self.response_id,
                 )
-            return result.new_items[-1].output
+            return result.new_items[-1].raw_item.content[-1].text
         result = Runner.run_streamed(
             self.agent,
             user_input,
@@ -271,7 +274,7 @@ class ShellAgent:
             logger.error("模型调用异常: {}", e)
             raise
         if answer:
-            self.console.print(Panel(answer, border_style="cyan"))
+            self.console.print(Panel(Markdown(answer), border_style="cyan"))
 
     async def chat(self):
         self.console.print(

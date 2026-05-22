@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from loguru import logger
 from pydantic import BaseModel, HttpUrl
@@ -30,6 +30,7 @@ class AIShellConfig(BaseModel):
 
 class AgentConfig(BaseModel):
     max_turns: int = 100
+    openai_api: Optional[Literal['chat_completions', 'chat_completions']] = None
 
 
 class ProviderConfig(BaseModel):
