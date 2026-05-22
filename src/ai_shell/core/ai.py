@@ -68,10 +68,12 @@ class ShellAgent:
         self.console = Console()
         self.actions = {}
 
+        if not self.provider.api_key:
+            raise ValueError(f'api_key of provider "{self.provider.name}" is missing')
         self.openai = AsyncOpenAI(
             api_key=self.provider.api_key,
             base_url=str(self.provider.base_url),
-            timeout=self.provider.timeout,
+            timeout=conf.CONF.agent.openai_timeout,
         )
         self.response_id = None
         self.session_history = SessionHisotry()
@@ -88,7 +90,7 @@ class ShellAgent:
         set_tracing_disabled(True)
 
         instructions = (
-            conf.CONF.ai_shell.system_prompt.strip()
+            conf.CONF.agent.system_prompt.strip()
             + SYSTEM_PROMPT_NOTICE.format(info=self.system_info())
         )
         logger.debug("instructions: {}", instructions)
@@ -126,7 +128,7 @@ class ShellAgent:
 
     async def _call_llm(self, user_input: str):
         logger.debug("输入: {}", user_input)
-        if not conf.CONF.ai_shell.stream:
+        if not conf.CONF.agent.stream:
             with self.console.status("正在思考...", speed=0.5):
                 result = await Runner.run(
                     self.agent,
@@ -198,6 +200,8 @@ class ShellAgent:
                 logger.debug("RunItemStreamEvent raw_item: {}", event.item.raw_item)
                 if event.item.raw_item.content:
                     for content in event.item.raw_item.content:
+                        if not content.text:
+                            continue
                         self.console.print(
                             Panel(
                                 Markdown(content.text), title="AI", border_style="cyan"
@@ -206,7 +210,7 @@ class ShellAgent:
                 elif event.item.raw_item.summary:
                     for sumary in event.item.raw_item.summary:
                         self.console.print(
-                            textwrap.indent(sumary.text, "> "), style="grey0"
+                            textwrap.indent(sumary.text.rstrip(), "> "), style="grey0"
                         )
                 continue
             else:

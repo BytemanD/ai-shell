@@ -18,26 +18,24 @@ DEFAULT_SYSTEM_PROMPT = """你是一个操作系统专家，擅长使用命令�
 
 
 class AIShellConfig(BaseModel):
-    system_prompt: str = DEFAULT_SYSTEM_PROMPT
     input_prompt: str = "请输入您的意图"
     exit_keys: List[str] = ["exit", "quit", "q"]
     use_provider: str = "alibaba"
-    message_window: int = 50
-    stream: bool = True
     show_failed_event: bool = True
     
 
-
 class AgentConfig(BaseModel):
+    system_prompt: str = DEFAULT_SYSTEM_PROMPT
     max_turns: int = 100
     openai_api: Optional[Literal['chat_completions', 'chat_completions']] = None
+    openai_timeout: int = 180
+    stream: bool = True
 
 
 class ProviderConfig(BaseModel):
     name: str
     base_url: HttpUrl
     api_key: str = ""
-    timeout: int = 10
     model: str = ""
     # e.g. {"enable_thinking": true}
     extra_body: Optional[Dict] = None
