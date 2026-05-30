@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ai-shell = "ai_shell.cmd.cli:main"
+aishell = "ai_shell.cmd.aishell:main"
 
 [dependency-groups]
 dev = [

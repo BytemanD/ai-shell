@@ -35,7 +35,7 @@ from ai_shell.common import conf
 from ai_shell.core.session import SessionHisotry
 
 # from ai_shell.core import tools
-from ai_shell.core.tools import common, mysql, shell, sqlite
+from ai_shell.core.tools import common, mysql, shell, sqlite, web
 
 SYSTEM_PROMPT_NOTICE = """
 当前系统：
@@ -107,6 +107,8 @@ class ShellAgent:
                 sqlite.execute_sql,
                 mysql.connect_db,
                 mysql.execute_sql,
+                web.web_get,
+                # web.web_post,
             ],
         )
         atexit.register(self.close)
