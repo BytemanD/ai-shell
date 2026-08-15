@@ -35,7 +35,7 @@ def remove_session(session_id: List[str], all=False):
 
     shell_agent = ShellAgent()
     if all:
-        session_id_list = shell_agent.get_agent_sessions()
+        session_id_list = [x.session_id for x in shell_agent.get_agent_sessions()]
     else:
         session_id_list = session_id
 
@@ -43,8 +43,8 @@ def remove_session(session_id: List[str], all=False):
         click.secho("无 session", fg="yellow")
         return
     for item in session_id_list:
-        asyncio.run(shell_agent.delete_agent_session(item.session_id))
-        click.secho(f"removed session {item.session_id}", fg="green")
+        asyncio.run(shell_agent.delete_agent_session(item))
+        click.secho(f"removed session {item}", fg="green")
 
 
 @session.command("clear")
@@ -79,30 +79,52 @@ def list_messages(count: True, session: Optional[str]):
     console = Console()
     console.print(f"session: {session_store.session_id}", style="cyan")
 
-    items = asyncio.run(session_store.get_items())
+    items = asyncio.run(
+        session_history.get_messages(
+            session_id=session,
+            last_session=True if not session else False,
+        )
+    )
+
     if count:
         click.echo(f"count {len(items)}")
         return
-
     for item in items:
-        role: str = item.get("role")
+        role: str = item.get("role", "")
         if role == "system":
             continue
         # breakpoint()
+        # print(type(item), item)
+        title = ""
+        content = ""
         if role:
             title = role
-            border_style="magenta"
-            content = item.get("content")
+            if role in ["user"]:
+                border_style = "magenta"
+                content = item.get("content")
+            elif role in ["assistant"]:
+                content = "\n".join(
+                    [x.get("text", "") for x in item.get("content", [])]
+                )
+                border_style = "green"
         elif item.get("type"):
             title = item.get("type")
             if title == "function_call":
-                content = f"Call `{item.get('name')}` with arguments: {item.get('arguments')}"
-                border_style="cyan"
-            elif title == "function_call_output":
+                content = (
+                    f"Call `{item.get('name')}` with arguments: {item.get('arguments')}"
+                )
+                border_style = "cyan"
+            elif title in ["function_call_output"]:
                 content = item.get("output")
-                border_style="green"
+                border_style = "green"
+            elif title in ["message"]:
+                content = "\n".join([x.get("text") for x in item.get("content", [])])
+                border_style = "cyan"
             else:
                 content = str(item)
                 border_style = "grey0"
-
-        console.print(Panel(content, title=title, title_align='left', border_style=border_style))
+        else:
+            continue
+        console.print(
+            Panel(content, title=title, title_align="left", border_style=border_style)
+        )

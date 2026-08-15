@@ -2,7 +2,7 @@ import sqlite3
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, TypedDict
 
 from agents import SQLiteSession
 from loguru import logger
@@ -117,3 +117,25 @@ class SessionHisotry:
             (session_id,),
         )
         conn.commit()
+
+    async def get_messages(
+        self,
+        session_id: Optional[str] = None,
+        last_session: bool = False,
+    ):
+        from openai.types.responses import EasyInputMessageParam
+
+        session_store = self.get_session_store(
+            session_id=session_id, last_session=last_session, raise_if_not_found=True
+        )
+        items: List[dict] = []
+        for item in await session_store.get_items():
+            role = item.get("role", "")
+            if role:
+                if role == "system":
+                    continue
+                items.append({"role": role, "content": item.get("content", "")})
+                continue
+            # type = item.get("type", "")
+            # content = item.get("content", "")
+        return items
