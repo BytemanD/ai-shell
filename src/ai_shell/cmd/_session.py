@@ -17,9 +17,7 @@ def session():
 @async_cmd
 async def list_session():
     """显示会话列表"""
-    async with get_checkpointer_saver() as saver:
-        agent = ShellAgent(saver)
-        output.print_models(agent._agent.list_session())
+    output.print_models(ShellAgent.get_agent_sessions())
 
 
 @session.command("remove")
@@ -33,26 +31,20 @@ async def remove_session(session_id: list[str], all=False):
     if all and session_id:
         raise click.BadParameter("请不要同时指定会话Id 和 --all")
 
-    async with get_checkpointer_saver() as saver:
-        agent = ShellAgent(saver)
-        if all:
-            session_id_list = [x.uuid for x in agent.get_agent_sessions()]
-        else:
-            session_id_list = session_id
-
-        if not session_id_list:
-            click.secho("无 session", fg="yellow")
-            return
-        for item in session_id_list:
-            agent.delete_agent_session(item)
-            click.secho(f"removed session {item}", fg="green")
+    session_id_list = [x.uuid for x in ShellAgent.get_agent_sessions()] if all else session_id
+    if not session_id_list:
+        click.secho("无 session", fg="yellow")
+        return
+    for item in session_id_list:
+        ShellAgent.delete_agent_session(item)
+        click.secho(f"removed session {item}", fg="green")
 
 
 @session.command("messages")
-@click.argument("session", type=str, help="session id")
+@click.argument("session", type=str)
 @click.option("-c", "--count", is_flag=True, help="show messeges count")
 @async_cmd
-async def list_messages(count: bool, session: str):
+async def list_messages(session: str, count: bool):
     async with get_checkpointer_saver() as saver:
         agent = ShellAgent(saver)
         messages = await agent.get_session_messages(session)

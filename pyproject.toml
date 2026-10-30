@@ -23,8 +23,7 @@ classifiers = [
 dependencies = [
     "click>=8.3.1",
     "rich>=14.3.3",
-    "pystonic[agent]",
-    "sqlmodel>=0.0.48",
+    "pystonic[agent,orm,pretty]",
 ]
 
 [project.scripts]

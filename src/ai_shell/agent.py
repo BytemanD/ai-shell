@@ -40,11 +40,6 @@ class ShellAgent:
             ):
                 raise ValueError("model: {CONF.ai_shell.use_model} not exists")
 
-        self.ctx = RuntimeContext(
-            providers=CONF.agent.providers,
-            thread_id=self.session.uuid,
-            tools=builtin.WorkToolkit().get_tools(),
-        )
 
     @property
     def session(self):
@@ -64,6 +59,11 @@ class ShellAgent:
     #     return [x.id for x in (await self.openai.models.list()).data]
 
     async def _call_llm(self, user_input: str):
+        ctx = RuntimeContext(
+            providers=CONF.agent.providers,
+            thread_id=self.session.uuid,
+            tools=builtin.WorkToolkit().get_tools(),
+        )
         reasoning = False
         # with Live(console=self.console) as live:
         #     for i in range(10):
@@ -71,7 +71,7 @@ class ShellAgent:
         #         live.update(f"正在处理... {i}/10")
         #         time.sleep(0.5)
 
-        async for event in self._agent.astream(self.ctx, user_input):
+        async for event in self._agent.astream(ctx, user_input):
             reasoning_content = event.additional_kwargs.get("reasoning_content")
             if reasoning_content:
                 reasoning = True
@@ -109,12 +109,15 @@ class ShellAgent:
                 break
             await self.run(user_input)
 
-    def get_agent_sessions(self):
-        """获取会话列表"""
-        return self._agent.list_session()
-
-    def delete_agent_session(self, session_id: str):
-        self._agent.delete_session(session_id)
 
     async def get_session_messages(self, session_id: str):
         return await self._agent.list_messages(session_id)
+
+    @classmethod
+    def get_agent_sessions(cls):
+        """获取会话列表"""
+        return AsyncAgent.list_session()
+
+    @classmethod
+    def delete_agent_session(cls, session_id: str):
+        AsyncAgent.delete_session(session_id)
