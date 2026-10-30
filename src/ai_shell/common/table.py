@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence, Type
+from collections.abc import Sequence
 
 from pydantic import BaseModel
 from rich.table import Table
@@ -6,12 +6,12 @@ from rich.table import Table
 
 class Column(BaseModel):
     name: str
-    max_width: Optional[int] = None
+    max_width: int | None = None
     no_wrap: bool = False
 
 
 def default_rich_table(
-    T: Type[BaseModel], items: Sequence[BaseModel], columns: List[Column] = None
+    T: type[BaseModel], items: Sequence[BaseModel], columns: list[Column] = None
 ) -> Table:
     if not columns:
         columns = [Column(name=x) for x in T.model_fields.keys()]

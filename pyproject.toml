@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "AI Shell - A shell for AI"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 keywords = ["ai", "shell", "cli", "llm", "command", "terminal"]
 authors = [{ name = "BytemanD", email = "byteman.d@outlook.com" }]
 classifiers = [
@@ -26,7 +26,12 @@ dependencies = [
     "openai-agents>=0.15.0",
     "pymysql>=1.2.0",
     "rich>=14.3.3",
+<<<<<<< Updated upstream
     "pystonic>=0.2.1",
+=======
+    "pystonic[agent]",
+    "sqlmodel>=0.0.48",
+>>>>>>> Stashed changes
 ]
 
 [project.scripts]
@@ -48,12 +53,12 @@ source = "uv-dynamic-versioning"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_shell"]
 
-[tool.uv.sources]
-pystonic = { index = "testpypi" }
-
 [[tool.uv.index]]
 name = "tencent"
 url = "http://mirrors.cloud.tencent.com/pypi/simple"
+
+[tool.uv.sources]
+pystonic = { git = "https://github.com/BytemanD/pystonic.git" }
 
 [[tool.uv.index]]
 name = "testpypi"

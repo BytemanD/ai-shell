@@ -2,7 +2,10 @@ import sqlite3
 import uuid
 from datetime import datetime
 from enum import Enum
+<<<<<<< Updated upstream
 from typing import List, Optional, TypedDict
+=======
+>>>>>>> Stashed changes
 
 from agents import SQLiteSession
 from loguru import logger
@@ -39,7 +42,7 @@ class SessionHisotry:
 
     def get_session_store(
         self,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
         last_session: bool = False,
         raise_if_not_found: bool = False,
         save_session: bool = True,
@@ -62,7 +65,7 @@ class SessionHisotry:
             session_id, db_path=self.store_file if save_session else ":memory:"
         )
 
-    def _query_agent_session(self, session_id: Optional[str] = None):
+    def _query_agent_session(self, session_id: str | None = None):
         if not self.store_file:
             return
         conn = sqlite3.connect(self.store_file)
@@ -74,8 +77,8 @@ class SessionHisotry:
             params = (session_id,)
         return conn.execute(sql, params)
 
-    def get_agent_sessions(self, session_id: Optional[str] = None):
-        sessions: List[AgentSession] = []
+    def get_agent_sessions(self, session_id: str | None = None):
+        sessions: list[AgentSession] = []
         cursor = self._query_agent_session(session_id=session_id)
         if not cursor:
             return sessions

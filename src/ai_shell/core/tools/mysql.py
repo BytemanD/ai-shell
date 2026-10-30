@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import pymysql
 from agents import function_tool
@@ -9,16 +9,15 @@ _global_conn = None
 
 
 class MysqlTool:
-
     @staticmethod
     def connect_db(
         user: str = "root",
-        password: Optional[str] = None,
+        password: str | None = None,
         host: str = "localhost",
         port: int = 3306,
-        database: Optional[str]=None,
+        database: str | None = None,
         charset: str = "utf8mb4",
-        autocommit: bool=True,
+        autocommit: bool = True,
     ) -> str:
         global _global_conn
 
@@ -30,11 +29,11 @@ class MysqlTool:
             port=port,
             charset=charset,
             autocommit=autocommit,
-            cursorclass=DictCursor
+            cursorclass=DictCursor,
         )
 
     @staticmethod
-    def execute_sql(sql: str, parameters: Tuple[Any, ...] = ()) -> Dict[str, Any]:
+    def execute_sql(sql: str, parameters: tuple[Any, ...] = ()) -> dict[str, Any]:
         global _global_conn
 
         if _global_conn is None:
@@ -49,7 +48,7 @@ class MysqlTool:
                 _global_conn.commit()
 
             return {
-                'rows': [dict(x) for x in cursor.fetchall()],
+                "rows": [dict(x) for x in cursor.fetchall()],
                 "affected_rows": cursor.rowcount,
                 "last_row_id": last_id if last_id != 0 else None,
             }
@@ -62,12 +61,12 @@ class MysqlTool:
 @function_tool
 def connect_db(
     user: str = "root",
-    password: Optional[str] = None,
+    password: str | None = None,
     host: str = "localhost",
     port: int = 3306,
-    database: Optional[str]=None,
+    database: str | None = None,
     charset: str = "utf8mb4",
-    autocommit: bool=True,
+    autocommit: bool = True,
 ) -> str:
     """
     建立 Mysql 数据库连接，并保存为全局连接（供后续 execute_sql 使用）。
@@ -96,7 +95,7 @@ def connect_db(
 
 
 @function_tool
-def execute_sql(sql: str, parameters: Tuple[Any, ...] = ()) -> Dict[str, Any]:
+def execute_sql(sql: str, parameters: tuple[Any, ...] = ()) -> dict[str, Any]:
     """执行Mysql SQL 语句
     需要注意的是，如果SQL包含模糊匹配符号 `%`, 传入的sql 中的`%`应该替换为 `%%`,
     避免格式化错误。

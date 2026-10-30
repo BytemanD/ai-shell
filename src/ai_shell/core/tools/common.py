@@ -5,7 +5,35 @@ from agents import function_tool
 
 
 @function_tool
-def getcwd(path: str):
+def list_dir(
+    path: str | None = None,
+    name: str | None = None,
+    include_hidden: bool = False,
+) -> list[str]:
+    """列出目录下的子目录和文件
+
+    Args:
+        path: 路径，如何不指定，则使用当前目录
+        name: 模糊匹配文件/目录名
+        include_hidden: 是否包含 隐藏文件/目录
+    Returns:
+        文件/目录列表
+    """
+    find_path = Path(path) if path else Path.cwd()
+
+    def _filter(x: Path):
+        if name and name not in x.name:
+            return False
+        if not include_hidden and x.name.startswith("."):
+            return False
+        return True
+
+    children = [x for x in find_path.iterdir()]
+    return [str(x.relative_to(find_path)) for x in filter(_filter, children)]
+
+
+@function_tool
+def change_dir(path: str):
     """切换到指定目录"""
     os.chdir(path)
 

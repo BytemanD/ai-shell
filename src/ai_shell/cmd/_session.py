@@ -1,5 +1,4 @@
 import asyncio
-from typing import List, Optional
 
 import click
 from loguru import logger
@@ -26,7 +25,7 @@ def list_session():
 @session.command("remove")
 @click.argument("session_id", nargs=-1)
 @click.option("--all", is_flag=True, help="删除所有会话")
-def remove_session(session_id: List[str], all=False):
+def remove_session(session_id: list[str], all=False):
     """删除会话"""
     if not all and not session_id:
         raise click.BadParameter("请指定会话Id 或 --all")
@@ -63,7 +62,7 @@ def clear_session(session: str):
 @session.command("messages")
 @click.option("-c", "--count", is_flag=True, help="只输出数量")
 @click.option("-s", "--session", type=str, help="session id")
-def list_messages(count: True, session: Optional[str]):
+def list_messages(count: True, session: str | None):
     """显示会话聊天记录(默认上一次)"""
     session_history = SessionHisotry()
     try:
@@ -99,6 +98,7 @@ def list_messages(count: True, session: Optional[str]):
         content = ""
         if role:
             title = role
+<<<<<<< Updated upstream
             if role in ["user"]:
                 border_style = "magenta"
                 content = item.get("content")
@@ -107,6 +107,10 @@ def list_messages(count: True, session: Optional[str]):
                     [x.get("text", "") for x in item.get("content", [])]
                 )
                 border_style = "green"
+=======
+            border_style = "magenta"
+            content = item.get("content")
+>>>>>>> Stashed changes
         elif item.get("type"):
             title = item.get("type")
             if title == "function_call":
@@ -114,6 +118,7 @@ def list_messages(count: True, session: Optional[str]):
                     f"Call `{item.get('name')}` with arguments: {item.get('arguments')}"
                 )
                 border_style = "cyan"
+<<<<<<< Updated upstream
             elif title in ["function_call_output"]:
                 content = item.get("output")
                 border_style = "green"
@@ -125,6 +130,15 @@ def list_messages(count: True, session: Optional[str]):
                 border_style = "grey0"
         else:
             continue
+=======
+            elif title == "function_call_output":
+                content = item.get("output")
+                border_style = "green"
+            else:
+                content = str(item)
+                border_style = "grey0"
+
+>>>>>>> Stashed changes
         console.print(
             Panel(content, title=title, title_align="left", border_style=border_style)
         )

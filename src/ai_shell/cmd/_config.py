@@ -1,6 +1,8 @@
 import click
 import toml
-from ai_shell.common.conf import AppConfig
+from pystonic.common.conf import DEFAULT_CONF_FILE
+
+from ai_shell.common.conf import CONF
 
 
 @click.group()
@@ -10,15 +12,16 @@ def config():
 
 @config.command()
 def list():
-    config = AppConfig.model_validate({})
+    click.secho("配置文件:", fg="cyan")
+    for file_path in DEFAULT_CONF_FILE:
+        if file_path.exists():
+            click.echo(file_path)
 
-    click.secho(f"配置文件: {AppConfig.get_conf_file()}", fg="cyan")
     click.echo()
-    click.echo(toml.dumps(config.model_dump(mode="json")))
+    click.echo(toml.dumps(CONF.model_dump(mode="json")))
 
 
-@config.command()
-def save():
-    config = AppConfig.model_validate({})
-    config.save(exclude_defaults=True)
-    click.secho(f"保存到配置文件: {AppConfig.get_conf_file()}", fg="green")
+# @config.command()
+# def save():
+#     CONF.save(exclude_defaults=True)
+#     click.secho(f"保存到配置文件: {DEFAULT_CONF_FILE[-1]}", fg="green")

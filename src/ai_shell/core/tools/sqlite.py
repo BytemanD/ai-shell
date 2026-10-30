@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Any, Dict, Tuple
+from typing import Any
 
 from agents import function_tool
 
@@ -27,9 +27,7 @@ def connect_db(db_path: str = ":memory:") -> str:
 
 
 @function_tool
-def execute_sql(
-    sql: str, parameters: Tuple[Any, ...] = ()
-) -> Dict[str, Any]:
+def execute_sql(sql: str, parameters: tuple[Any, ...] = ()) -> dict[str, Any]:
     """
     执行任意 SQL 语句（SELECT / INSERT / UPDATE / DELETE / CREATE TABLE 等）。
     自动提交事务，如果尚未连接则自动连接内存数据库。
@@ -58,7 +56,7 @@ def execute_sql(
 
         # 判断是否是 SELECT 查询
         if sql.strip().upper().startswith("SELECT"):
-            return {'rows': [dict(x) for x in cursor.fetchall()]}
+            return {"rows": [dict(x) for x in cursor.fetchall()]}
         else:
             _global_conn.commit()
             last_id = cursor.lastrowid
