@@ -31,7 +31,9 @@ async def remove_session(session_id: list[str], all=False):
     if all and session_id:
         raise click.BadParameter("请不要同时指定会话Id 和 --all")
 
-    session_id_list = [x.uuid for x in ShellAgent.get_agent_sessions()] if all else session_id
+    session_id_list = (
+        [x.uuid for x in ShellAgent.get_agent_sessions()] if all else session_id
+    )
     if not session_id_list:
         click.secho("无 session", fg="yellow")
         return

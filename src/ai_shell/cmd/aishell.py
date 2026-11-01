@@ -6,6 +6,7 @@ from pystonic.common.log import setup_logger
 from pystonic.orm.database import create_all_tables
 
 from ai_shell.agent import ShellAgent
+from ai_shell.app import AIChatApp
 from ai_shell.cmd import _config, _provider, _session, async_cmd
 
 with contextlib.suppress(ImportError):
@@ -15,9 +16,7 @@ with contextlib.suppress(ImportError):
 @contextlib.asynccontextmanager
 async def get_agent(session_id: str | None = None, yes=False, last_session=False):
     async with get_checkpointer_saver() as saver:
-        yield ShellAgent(
-            saver, session_id=session_id, yes=yes, last_session=last_session
-        )
+        yield ShellAgent(saver)
 
 
 @click.group(
@@ -47,20 +46,18 @@ async def _do_chat(
 async def run(input: str, yes: bool, last: bool, session: str):
     """执行模式"""
     async with get_checkpointer_saver() as saver:
-        agent = ShellAgent(saver, session_id=session, yes=yes, last_session=last)
-        await agent.run(input)
+        agent = ShellAgent(saver)
+        await agent.run(input, session_id=session, last_session=last)
 
 
 @root.command()
-@click.option("-y", "--yes", is_flag=True, help="yes to run")
-@click.option("-c", "--continue", "last", is_flag=True, help="continue")
-@click.option("-s", "--session", type=str, help="session id")
 @async_cmd
-async def chat(yes: bool, last: bool, session: str | None):
+async def chat():
     """交互模式"""
+
     async with get_checkpointer_saver() as saver:
-        agent = ShellAgent(saver, session_id=session, yes=yes, last_session=last)
-        await agent.chat()
+        agent = ShellAgent(saver)
+        await AIChatApp(agent).run_async()
 
 
 def main():

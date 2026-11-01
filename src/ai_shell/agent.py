@@ -17,16 +17,7 @@ from ai_shell.common.conf import CONF
 
 
 class ShellAgent:
-    def __init__(
-        self,
-        saver: BaseCheckpointSaver,
-        yes=False,
-        session_id: str | None = None,
-        last_session: bool = False,
-    ):
-        self.session_id = session_id
-        self.last_session = last_session
-        self.yes = yes
+    def __init__(self, saver: BaseCheckpointSaver):
         self.console = Console()
         self.actions = {}
 
@@ -40,38 +31,28 @@ class ShellAgent:
             ):
                 raise ValueError("model: {CONF.ai_shell.use_model} not exists")
 
-
-    @property
-    def session(self):
-        if not self._session:
-            self._session = self._agent.get_or_create_session(
-                session_id=self.session_id, last=self.last_session
-            )
-        return self._session
-
     def close(self):
         logger.info("close shell agent")
 
-    # def provider_info(self):
-    #     return f"提供商: {self.provider.name}\n模  型: {self.model}"
-
-    # async def list_model(self):
-    #     return [x.id for x in (await self.openai.models.list()).data]
-
-    async def _call_llm(self, user_input: str):
+    async def astream(self, user_input: str, session_id: str | None = None):
+        session = self._agent.get_or_create_session(session_id, title=user_input)
+        self._session = session
         ctx = RuntimeContext(
             providers=CONF.agent.providers,
-            thread_id=self.session.uuid,
+            thread_id=session.uuid,
             tools=builtin.WorkToolkit().get_tools(),
         )
-        reasoning = False
-        # with Live(console=self.console) as live:
-        #     for i in range(10):
-        #         # 每次更新显示的文字
-        #         live.update(f"正在处理... {i}/10")
-        #         time.sleep(0.5)
-
         async for event in self._agent.astream(ctx, user_input):
+            yield event
+
+    async def run(
+        self, user_input: str, session_id: str | None = None, last_session=False
+    ):
+        session = self._agent.get_or_create_session(
+            session_id=session_id, last=last_session
+        )
+        reasoning = False
+        async for event in self.astream(user_input, session_id=session_id):
             reasoning_content = event.additional_kwargs.get("reasoning_content")
             if reasoning_content:
                 reasoning = True
@@ -81,12 +62,9 @@ class ShellAgent:
                 self.console.print()
             self.console.print(event.content, end="")
             reasoning = False
-        if not self.session.title:
-            self._agent.update_session(self.session, user_input)
+        if not session.title:
+            self._agent.update_session(session, user_input)
         self.console.print()
-
-    async def run(self, user_input: str):
-        await self._call_llm(user_input)
 
     async def chat(self):
         # self.console.print(
@@ -109,14 +87,21 @@ class ShellAgent:
                 break
             await self.run(user_input)
 
-
     async def get_session_messages(self, session_id: str):
         return await self._agent.list_messages(session_id)
+
+    async def delete_session(self, session_id: str):
+        """删除会话及其消息记录"""
+        AsyncAgent.delete_session(session_id)
+        saver = getattr(self._agent, "_saver", None)
+        delete_thread = getattr(saver, "adelete_thread", None)
+        if delete_thread:
+            await delete_thread(session_id)
 
     @classmethod
     def get_agent_sessions(cls):
         """获取会话列表"""
-        return AsyncAgent.list_session()
+        return sorted(AsyncAgent.list_session(), key=lambda x: x.id, reverse=True)
 
     @classmethod
     def delete_agent_session(cls, session_id: str):

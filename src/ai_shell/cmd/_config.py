@@ -1,6 +1,6 @@
 import click
 import toml
-from pystonic.common.conf import DEFAULT_CONF_FILE
+from pystonic.common.conf import DEFAULT_CONF_FILES
 
 from ai_shell.common.conf import CONF
 
@@ -13,7 +13,7 @@ def config():
 @config.command()
 def list():
     click.secho("配置文件:", fg="cyan")
-    for file_path in DEFAULT_CONF_FILE:
+    for file_path in DEFAULT_CONF_FILES:
         if file_path.exists():
             click.echo(file_path)
 
